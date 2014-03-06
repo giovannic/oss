@@ -1,0 +1,1 @@
+libopenss_runtime_monitor_la-openss_send.lo: openss_send.c

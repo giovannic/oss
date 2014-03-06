@@ -1,0 +1,26 @@
+/HYPRE_struct_ls.h/1.1/Thu Jul 30 15:03:36 2009//
+/HYPRE_struct_pcg.c/1.1/Thu Jul 30 15:03:36 2009//
+/HYPRE_struct_smg.c/1.1/Thu Jul 30 15:03:36 2009//
+/Makefile/1.1/Thu Jul 30 15:03:36 2009//
+/coarsen.c/1.1/Thu Jul 30 15:03:36 2009//
+/cyclic_reduction.c/1.1/Thu Jul 30 15:03:36 2009//
+/general.c/1.1/Thu Jul 30 15:03:36 2009//
+/headers.h/1.1/Thu Jul 30 15:03:36 2009//
+/pcg_struct.c/1.1/Thu Jul 30 15:03:36 2009//
+/point_relax.c/1.1/Thu Jul 30 15:03:36 2009//
+/semi_interp.c/1.1/Thu Jul 30 15:03:36 2009//
+/semi_restrict.c/1.1/Thu Jul 30 15:03:36 2009//
+/smg.c/1.1/Thu Jul 30 15:03:36 2009//
+/smg.h/1.1/Thu Jul 30 15:03:36 2009//
+/smg2_setup_rap.c/1.1/Thu Jul 30 15:03:36 2009//
+/smg3_setup_rap.c/1.1/Thu Jul 30 15:03:36 2009//
+/smg_axpy.c/1.1/Thu Jul 30 15:03:36 2009//
+/smg_relax.c/1.1/Thu Jul 30 15:03:36 2009//
+/smg_residual.c/1.1/Thu Jul 30 15:03:36 2009//
+/smg_setup.c/1.1/Thu Jul 30 15:03:36 2009//
+/smg_setup_interp.c/1.1/Thu Jul 30 15:03:36 2009//
+/smg_setup_rap.c/1.1/Thu Jul 30 15:03:36 2009//
+/smg_setup_restrict.c/1.1/Thu Jul 30 15:03:36 2009//
+/smg_solve.c/1.1/Thu Jul 30 15:03:36 2009//
+/struct_ls.h/1.1/Thu Jul 30 15:03:36 2009//
+D

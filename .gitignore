@@ -1,3 +1,10 @@
+# target specific makefiles
+Makefile
+
+# eclipse projects
+.cproject
+.project
+
 # Compiled Object files
 *.slo
 *.lo

@@ -1,0 +1,76 @@
+
+NOTE 1: Here are commands to help in examining the 
+        openspeedshop database file with sqlite:
+
+sqlite3  name of openss data file
+sqlite3 prompt:  .schema   (shows layout of database)
+
+select name from functions;   (shows all function symbols)
+select count(*) from data;    (should be > 0 for valid data)
+select path from files;       (shows all files in database)
+select pid from threads;
+select mpi_rank from threads;
+select posix_tid from threads;
+select host from threads;
+select command from threads;
+
+an so on an so forth...
+
+
+
+# The order here corresponds to the thread list (example -np4 mpi job)
+sqlite> select pid from threads;
+2159  (thread 1)  mpirun 
+2188  (thread 2)
+2186  (thread 3)
+2185  (thread 4)
+2187  (thread 5)
+
+# Five blobs were sent
+select count(*) from data;
+5
+
+NOTE 2: How to create an Open|SpeedShop patch
+
+at the top-level directory do this command:
+cvs diff -uN > myOSS.patch
+
+
+How to use the patch
+at the top-level directory do this command:
+patch -p0 < myOSS.patch
+
+
+
+
+TEST FOR FILE LOCKING TO SEE IF SQLITE CAN CREATE A DATABASE FILE
+
+cd <directory in file system being checked>
+sqlite3 junkfile 
+create table JUNK (version integer);
+insert into JUNK (version) values(1); 
+cntl-D
+
+
+HOW TO BOOTSTRAP:
+
+If autotools not built then cd OpenSpeedShop_ROOT
+export OPENSS_AUTOTOOLS_ROOT=<autotools_path>
+./install.sh --devel
+# adjust module for autotools
+
+module load autotools-2.2.6b
+./bootstrap
+module unload autotools-2.2.6b
+
+
+
+HOW TO BUILD CBTF INSTRUMENTOR VERSION: (example configure)
+# shows where the expected components could/should come from (root, boost, cbtf are main categories)
+./configure --prefix=/users/jeg/todi/cbtf_oss --with-instrumentor=cbtf --enable-resolve-symbols=symtabapi --with-symtabapi=/users/jeg/todi/krell_root --with-mrnet=/users/jeg/todi/krell_root     --with-mrnet-version=4.0.0 --with-dyninst=/users/jeg/todi/krell_root --with-dyninst-version=8.0.0 --with-libdwarf=/users/jeg/todi/krell_root --with-libmonitor=/users/jeg/todi/krell_root     --with-libxerces-c-prefix=/users/jeg/todi/krell_root --with-cbtf=/users/jeg/todi/cbtf_proper_shared --with-cbtf-xml=/users/jeg/todi/cbtf_proper_shared --with-cbtf-mrnet=/users/jeg/todi/cbtf_proper_shared --with-cbtf-messages=/users/jeg/todi/cbtf_proper_shared --with-cbtf-services=/users/jeg/todi/cbtf_proper_shared --with-boost=/apps/todi/boost/1.50sn/gnu_434 --with-boost-libdir=/apps/todi/boost/1.50sn/gnu_434/lib --with-sqlite=/users/jeg/todi/krell_root
+
+
+HOW to cvs tag the release: (11-15-13 jeg)
+
+cvs tag openspeedshop_21
+

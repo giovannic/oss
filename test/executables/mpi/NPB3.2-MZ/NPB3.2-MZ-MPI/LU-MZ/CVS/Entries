@@ -1,0 +1,26 @@
+/Makefile/1.1/Wed Nov  9 16:03:17 2011//
+/blts.f/1.1/Wed Nov  9 16:03:17 2011//
+/buts.f/1.1/Wed Nov  9 16:03:17 2011//
+/erhs.f/1.1/Wed Nov  9 16:03:17 2011//
+/error.f/1.1/Wed Nov  9 16:03:17 2011//
+/exact.f/1.1/Wed Nov  9 16:03:17 2011//
+/exch_qbc.f/1.1/Wed Nov  9 16:03:17 2011//
+/header.h/1.1/Wed Nov  9 16:03:17 2011//
+/inputlu-mz.data.sample/1.1/Wed Nov  9 16:03:17 2011//
+/jacld.f/1.1/Wed Nov  9 16:03:17 2011//
+/jacu.f/1.1/Wed Nov  9 16:03:17 2011//
+/l2norm.f/1.1/Wed Nov  9 16:03:17 2011//
+/loadlu-mz.data.sample/1.1/Wed Nov  9 16:03:17 2011//
+/lu.f/1.1/Wed Nov  9 16:03:17 2011//
+/mpi_setup.f/1.1/Wed Nov  9 16:03:17 2011//
+/mpi_stuff.h/1.1/Wed Nov  9 16:03:17 2011//
+/pintgr.f/1.1/Wed Nov  9 16:03:17 2011//
+/read_input.f/1.1/Wed Nov  9 16:03:17 2011//
+/rhs.f/1.1/Wed Nov  9 16:03:17 2011//
+/setbv.f/1.1/Wed Nov  9 16:03:17 2011//
+/setcoeff.f/1.1/Wed Nov  9 16:03:17 2011//
+/setiv.f/1.1/Wed Nov  9 16:03:17 2011//
+/ssor.f/1.1/Wed Nov  9 16:03:17 2011//
+/verify.f/1.1/Wed Nov  9 16:03:17 2011//
+/zone_setup.f/1.1/Wed Nov  9 16:03:17 2011//
+D

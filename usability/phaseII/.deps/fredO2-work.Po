@@ -1,0 +1,1 @@
+fredO2-work.o: work.c

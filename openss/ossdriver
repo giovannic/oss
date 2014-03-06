@@ -1,0 +1,3047 @@
+#!/bin/bash
+################################################################################
+# Display Usage When Necessary
+################################################################################
+debug_flag=0
+
+# Initialize to indicate no "high" parameter was seen
+# If this is set we will up the sampling rate or threshold depending on the experiment
+high_flag=0
+
+# Initialize to indicate no "low" parameter was seen
+# If this is set we will lower the sampling rate or threshold depending on the experiment
+low_flag=0
+
+# Initialize to indicate no "default" parameter was seen
+# If this is set we will use the default sampling rate or default threshold depending on the experiment
+use_default_flag=0
+
+# Initialize to indicate no "input argument output filename value" parameter was seen
+# If this is set we will use the "input argument output filename value" parameter instead of the script created name
+input_argument_oname=0
+
+# Initialize to indicate no "input argument rate value" parameter was seen
+# If this is set we will use the "input argument rate value" parameter instead of the experiment default value
+input_argument_rate_threshold_value=0
+
+# Initialize to indicate no "input argument event value" parameter was seen
+# If this is set we will use the "input argument event value" parameter instead of the experiment default event value
+input_argument_event_or_trace_list_value=0
+
+# Initialize to indicate no "input compare database list value" parameter was seen
+# If this is set we will use the "input argument event value" parameter as the list of database files to compare
+input_compare_database_list=0
+
+# Initialize to indicate no "input argument compare metric" parameter was seen
+# If this is set we will use the "input argument compare metric" parameter instead of the experiment default compare metric value
+input_argument_compare_metric=0
+
+# Initialize to indicate "input argument compare viewtype=" parameter was seen
+# If this is set we will use the "input argument compare viewtype=" parameter instead of the experiment default compare metric value
+input_argument_compare_view_type=0
+
+#
+# DEFAULT VALUES - MUST MATCH THE DEFAULTS INSIDE THE OpenSpeedShop/plugins/collectors/<experiment_type> source
+#
+# Corresponds to OPENSS_PCSAMP_RATE or CBTF_PCSAMP_RATE
+pcsamp_default_rate=100
+
+# Corresponds to OPENSS_USERTIME_RATE or CBTF_USERTIME_RATE
+usertime_default_rate=35
+
+# Corresponds to OPENSS_HWC_EVENT or CBTF_HWC_EVENT
+hwc_default_event="PAPI_TOT_CYC"
+
+# Corresponds to OPENSS_HWC_THRESHOLD or CBTF_HWC_THRESHOLD
+hwc_default_threshold=10000
+
+# Corresponds to OPENSS_HWCSAMP_EVENTS or CBTF_HWCSAMP_EVENTS
+hwcsamp_default_events="PAPI_TOT_CYC,PAPI_FP_OPS"
+
+# Corresponds to OPENSS_HWCSAMP_RATE or CBTF_HWCSAMP_RATE
+hwcsamp_default_rate=100
+
+# Corresponds to OPENSS_HWCTIME_EVENT or CBTF_HWCTIME_EVENT
+hwctime_default_event="PAPI_TOT_CYC"
+
+# Corresponds to OPENSS_HWCTIME_THRESHOLD or CBTF_HWCTIME_THRESHOLD
+hwctime_default_threshold=10000
+
+# Corresponds to OPENSS_IO_TRACED or CBTF_IO_TRACED
+io_default_traceable_functions="close,creat,creat64,dup,dup2,lseek,lseek64,open,open64,pipe,pread,pread64,pwrite,pwrite64,read,readv,write,writev"
+
+# Corresponds to OPENSS_IOT_TRACED or CBTF_IO_TRACED
+iot_default_traceable_functions="close,creat,creat64,dup,dup2,lseek,lseek64,open,open64,pipe,pread,pread64,pwrite,pwrite64,read,readv,write,writev"
+
+# Corresponds to OPENSS_IOP_TRACED or CBTF_IO_TRACED
+iop_default_traceable_functions="close,creat,creat64,dup,dup2,lseek,lseek64,open,open64,pipe,pread,pread64,pwrite,pwrite64,read,readv,write,writev"
+
+# Corresponds to OPENSS_MEM_TRACED or CBTF_MEM_TRACED
+mem_default_traceable_functions="malloc,free,memalign,posix_memalign,calloc,realloc"
+
+# Corresponds to OPENSS_PTHREADS_TRACED or CBTF_PTHREADS_TRACED
+pthreads_default_traceable_functions="pthread_create,pthread_mutex_init,pthread_mutex_destroy,pthread_mutex_lock,pthread_mutex_trylock,pthread_mutex_unlock,pthread_cond_init,pthread_cond_destroy,pthread_cond_signal,pthread_cond_broadcast,pthread_cond_wait,pthread_cond_timedwait"
+
+# Corresponds to OPENSS_MPI_TRACED or CBTF_MPI_TRACED
+mpi_default_traceable_functions="MPI_Allgather,MPI_Allgatherv,MPI_Allreduce,MPI_Alltoall,MPI_Alltoallv,MPI_Barrier,MPI_Bcast,MPI_Bsend,MPI_Bsend_init,MPI_Cancel,MPI_Cart_create,MPI_Cart_sub,MPI_Comm_create,MPI_Comm_dup,MPI_Comm_free,MPI_Comm_split,MPI_File_close,MPI_File_delete,MPI_File_get_amode,MPI_File_get_group,MPI_File_get_info,MPI_File_get_position,MPI_File_get_position_shared,MPI_File_get_size,MPI_File_get_view,MPI_File_iread,MPI_File_iread_at,MPI_File_iread_shared,MPI_File_iwrite,MPI_File_iwrite_at,MPI_File_iwrite_shared,MPI_File_open,MPI_File_read,MPI_File_read_all,MPI_File_read_at,MPI_File_read_at_all,MPI_File_read_ordered,MPI_File_read_shared,MPI_File_seek,MPI_File_seek_shared,MPI_File_set_info,MPI_File_set_size,MPI_File_set_view,MPI_File_write,MPI_File_write_all,MPI_File_write_at,MPI_File_write_at_all,MPI_File_write_ordered,MPI_File_write_shared,MPI_Finalize,MPI_Gather,MPI_Gatherv,MPI_Get_count,MPI_Graph_create,MPI_Ibsend,MPI_Init,MPI_Intercomm_create,MPI_Intercomm_merge,MPI_Iprobe,MPI_Irecv,MPI_Irsend,MPI_Isend,MPI_Issend,MPI_Pack,MPI_Probe,MPI_Recv,MPI_Recv_init,MPI_Reduce,MPI_Reduce_scatter,MPI_Request_free,MPI_Rsend,MPI_Rsend_init,MPI_Scan,MPI_Scatter,MPI_Scatterv,MPI_Send,MPI_Sendrecv,MPI_Sendrecv_replace,MPI_Ssend,MPI_Ssend_init,MPI_Start,MPI_Startall,MPI_Test,MPI_Testall,MPI_Testany,MPI_Testsome,MPI_Unpack,MPI_Wait,MPI_Waitall,MPI_Waitany,MPI_Waitsome"
+
+mpip_default_traceable_functions="MPI_Allgather,MPI_Allgatherv,MPI_Allreduce,MPI_Alltoall,MPI_Alltoallv,MPI_Barrier,MPI_Bcast,MPI_Bsend,MPI_Bsend_init,MPI_Cancel,MPI_Cart_create,MPI_Cart_sub,MPI_Comm_create,MPI_Comm_dup,MPI_Comm_free,MPI_Comm_split,MPI_File_close,MPI_File_delete,MPI_File_get_amode,MPI_File_get_group,MPI_File_get_info,MPI_File_get_position,MPI_File_get_position_shared,MPI_File_get_size,MPI_File_get_view,MPI_File_iread,MPI_File_iread_at,MPI_File_iread_shared,MPI_File_iwrite,MPI_File_iwrite_at,MPI_File_iwrite_shared,MPI_File_open,MPI_File_read,MPI_File_read_all,MPI_File_read_at,MPI_File_read_at_all,MPI_File_read_ordered,MPI_File_read_shared,MPI_File_seek,MPI_File_seek_shared,MPI_File_set_info,MPI_File_set_size,MPI_File_set_view,MPI_File_write,MPI_File_write_all,MPI_File_write_at,MPI_File_write_at_all,MPI_File_write_ordered,MPI_File_write_shared,MPI_Finalize,MPI_Gather,MPI_Gatherv,MPI_Get_count,MPI_Graph_create,MPI_Ibsend,MPI_Init,MPI_Intercomm_create,MPI_Intercomm_merge,MPI_Iprobe,MPI_Irecv,MPI_Irsend,MPI_Isend,MPI_Issend,MPI_Pack,MPI_Probe,MPI_Recv,MPI_Recv_init,MPI_Reduce,MPI_Reduce_scatter,MPI_Request_free,MPI_Rsend,MPI_Rsend_init,MPI_Scan,MPI_Scatter,MPI_Scatterv,MPI_Send,MPI_Sendrecv,MPI_Sendrecv_replace,MPI_Ssend,MPI_Ssend_init,MPI_Start,MPI_Startall,MPI_Test,MPI_Testall,MPI_Testany,MPI_Testsome,MPI_Unpack,MPI_Wait,MPI_Waitall,MPI_Waitany,MPI_Waitsome"
+
+mpi_asynchronous_p2p_traceable_functions="MPI_Cancel:MPI_Ibsend:MPI_Iprobe:MPI_Irecv:MPI_Irsend:\
+MPI_Isend:MPI_Issend:MPI_Request_free:MPI_Test:MPI_Testall:\
+MPI_Testany:MPI_Testsome:MPI_Wait:MPI_Waitall:MPI_Waitany:MPI_Waitsome"
+mpi_collective_com_traceable_functions="MPI_Allgather:MPI_Allgatherv:MPI_Allreduce:MPI_Alltoall:\
+MPI_Alltoallv:MPI_Barrier:MPI_Bcast:MPI_Gather:MPI_Gatherv:\
+MPI_Reduce:MPI_Reduce_scatter:MPI_Scan:MPI_Scatter:MPI_Scatterv"
+mpi_datatypes_traceable_functions="MPI_Pack:MPI_Unpack"
+mpi_environment_traceable_functions="MPI_Finalize:MPI_Init"
+mpi_file_io_traceable_functions="MPI_File_close:MPI_File_delete:MPI_File_get_amode:MPI_File_get_group:\
+MPI_File_get_info:MPI_File_get_position:MPI_File_get_position_shared: \
+MPI_File_get_size:MPI_File_get_view:MPI_File_iread:\
+MPI_File_iread_at:MPI_File_iread_shared:MPI_File_iwrite:MPI_File_iwrite_at:\
+MPI_File_iwrite_shared:MPI_File_open:MPI_File_read:MPI_File_read_all:\
+MPI_File_read_at:MPI_File_read_at_all:MPI_File_read_ordered:MPI_File_read_shared:MPI_File_seek:\
+MPI_File_seek_shared:MPI_File_set_info:MPI_File_set_size:MPI_File_set_view:\
+MPI_File_write:MPI_File_write_all:MPI_File_write_at:MPI_File_write_at_all:\
+MPI_File_write_ordered:MPI_File_write_shared"
+mpi_graphs_contexts_comms_traceable_functions="MPI_Comm_create:MPI_Comm_dup:MPI_Comm_free:MPI_Comm_split:\
+MPI_Intercomm_create:MPI_Intercomm_merge"
+mpi_persistent_com_traceable_functions="MPI_Bsend_init:MPI_Recv_init:MPI_Rsend_init:MPI_Send_init:\
+MPI_Ssend_init:MPI_Start:MPI_Startall"
+mpi_process_topologies_traceable_functions="MPI_Cart_create:MPI_Cart_sub:MPI_Graph_create"
+mpi_synchronous_p2p_traceable_functions="MPI_Bsend:MPI_Get_count:MPI_Probe:MPI_Recv:\
+MPI_Rsend:MPI_Send:MPI_Sendrecv:MPI_Sendrecv_replace:MPI_Ssend"
+
+# Corresponds to OPENSS_MPIT_TRACED or CBTF_MPI_TRACED
+mpit_default_traceable_functions="MPI_Allgather,MPI_Allgatherv,MPI_Allreduce,MPI_Alltoall,MPI_Alltoallv,MPI_Barrier,MPI_Bcast,MPI_Bsend,MPI_Bsend_init,MPI_Cancel,MPI_Cart_create,MPI_Cart_sub,MPI_Comm_create,MPI_Comm_dup,MPI_Comm_free,MPI_Comm_split,MPI_Finalize,MPI_Gather,MPI_Gatherv,MPI_Get_count,MPI_Graph_create,MPI_Ibsend,MPI_Init,MPI_Intercomm_create,MPI_Intercomm_merge,MPI_Iprobe,MPI_Irecv,MPI_Irsend,MPI_Isend,MPI_Issend,MPI_Pack,MPI_Probe,MPI_Recv,MPI_Recv_init,MPI_Reduce,MPI_Reduce_scatter,MPI_Request_free,MPI_Rsend,MPI_Rsend_init,MPI_Scan,MPI_Scatter,MPI_Scatterv,MPI_Send,MPI_Sendrecv,MPI_Sendrecv_replace,MPI_Ssend,MPI_Ssend_init,MPI_Start,MPI_Startall,MPI_Test,MPI_Testall,MPI_Testany,MPI_Testsome,MPI_Unpack,MPI_Wait,MPI_Waitall,MPI_Waitany,MPI_Waitsome"
+
+# Corresponds to OPENSS_MPIOTF_TRACED or CBTF_MPI_TRACED
+mpiotf_default_traceable_functions="MPI_Allgather,MPI_Allgatherv,MPI_Allreduce,MPI_Alltoall, MPI_Alltoallv,MPI_Barrier,MPI_Bcast,MPI_Bsend,MPI_Bsend_init, MPI_Cancel,MPI_Cart_create,MPI_Cart_sub,MPI_Comm_create, MPI_Comm_dup,MPI_Comm_free,MPI_Comm_split,MPI_Finalize, MPI_Gather,MPI_Gatherv,MPI_Get_count,MPI_Graph_create, MPI_Ibsend,MPI_Init,MPI_Intercomm_create,MPI_Intercomm_merge, MPI_Iprobe,MPI_Irecv,MPI_Irsend,MPI_Isend,MPI_Issend, MPI_Pack,MPI_Probe,MPI_Recv,MPI_Recv_init,MPI_Reduce, MPI_Reduce_scatter,MPI_Request_free,MPI_Rsend,MPI_Rsend_init, MPI_Scan,MPI_Scatter,MPI_Scatterv,MPI_Send,MPI_Sendrecv, MPI_Sendrecv_replace,MPI_Ssend,MPI_Ssend_init,MPI_Start, MPI_Startall,MPI_Test,MPI_Testall,MPI_Testany,MPI_Testsome, MPI_Unpack,MPI_Wait,MPI_Waitall,MPI_Waitany,MPI_Waitsome"
+
+# Corresponds to OPENSS_FPE_EVENT or CBTF_FPE_EVENT
+fpe_default_events="inexact_result,division_by_zero,underflow,overflow,invalid_operation"
+
+
+#
+# END DEFAULT VALUES
+#
+if [ -z "$OPENSS_DEBUG_DRIVER" ]
+then
+  echo ""
+else
+  debug_flag=1
+  echo "DEBUG: turning DEBUG flag on because OPENSS_DEBUG_DRIVER is set"
+fi
+
+if [ $debug_flag == 1 ]
+then
+  echo
+  echo "DEBUG: ossdriver command-line argument #0 = $0"
+  echo "DEBUG: ossdriver command-line argument #1 = $1"
+  echo "DEBUG: ossdriver command-line argument #2 = $2"
+  echo "DEBUG: ossdriver command-line argument #3 = $3"
+  echo "DEBUG: ossdriver command-line argument #4 = $4"
+  echo "DEBUG: ossdriver command-line argument #5 = $5"
+  echo "DEBUG: ossdriver command-line argument #6 = $6"
+  echo
+fi
+
+might_have_error=0
+if  [ -z "$6" ]
+then
+  if [ $debug_flag == 1 ]
+  then
+     echo "DEBUG: GOOD, no 6th argument, ossdriver command-line argument #6 = $6"
+  fi
+else
+  echo "[openss]: Too many arguments specified.  Possible issue: Was your executable enclosed in quotes?"
+  might_have_error=1
+fi
+
+calling_script_name=$0
+experiment_name=${calling_script_name##*/}
+
+if [[ -z "$1" || $might_have_error == 1 ]] 
+then
+   echo ""
+   echo "Usage: $0 \"executable\" [extra_args]"
+   echo "Usage: $0 help or --help"
+   echo ""
+   echo "    where \"executable\" is defined as the command that you normally "
+   echo "        use to execute your program: but in quotes"
+   echo "    For example: $0 \"mpirun -N 16 -n 256 ./smg2000 -n 50 50 50\" [extra_args]"
+   echo "        where the optional \"extra_args\" is defined as follows:"
+   if [[ "$experiment_name" != "ossio" && "$experiment_name" != "ossiot"  && 
+         "$experiment_name" != "ossmpi" && "$experiment_name" != "ossmpit" && "$experiment_name" != "ossmpiotf" ]]; then
+     echo "            \"high\"     - Increase the default sampling rate or threshold "
+     echo "                           value to increase the number of samples taken."
+     echo "            \"low\"      - Decrease the default sampling rate or threshold "
+     echo "                           value to decrease the number of samples taken."
+     echo "            \"default\"  - Use the default sampling rate or threshold value. "
+     echo "                           This will override any environment variable settings."
+   fi
+   if [[ "$experiment_name" == "osspcsamp" || "$experiment_name" == "ossusertime" ]]; then
+     echo "            \"rate value\"  - Use this sampling rate"
+     echo "                              instead of the default or any environment variable settings."
+     echo "                                 For example: 80"
+     echo "                                     for a sampling rate of 80 samples per second."
+   elif [[ "$experiment_name" == "osshwc" || "$experiment_name" == "osshwctime" ]]; then
+     echo "            \"papi_event\"  - Specify the papi event."
+     echo "                                 For example: PAPI_FP_OPS"
+     echo "                                     for Floating point operations."
+     echo "                                 Or:          PAPI_L1_DCM"
+     echo "                                     for Level 1 data cache misses."
+     echo "            \"threshold value\" - Use this threshold value for the specified papi_event "
+     echo "                                  instead of the default or any environment variable settings."
+     whichpapi_avail=`which papi_avail`
+     if test -f $whichpapi_avail
+      then
+        echo " Available Hardware counter events are:"
+        $whichpapi_avail | grep "Yes   No"
+     fi
+   elif [ "$experiment_name" == "osshwcsamp" ]; then
+     echo "            \"papi_event(s)\"  - Specify the papi event or set of events up to six (6) events depending on number available on your platform."
+     echo "                                 For example: PAPI_FP_OPS"
+     echo "                                     for Floating point operations."
+     echo "                                 And/Or:          PAPI_L1_DCM"
+     echo "                                     for Level 1 data cache misses."
+     echo "            \"sampling rate value\"  - Use this sampling rate"
+     echo "                              instead of the default or any environment variable settings."
+     echo "                                 For example: 80"
+     echo "                                     for a sampling rate of 80 samples per second."
+     whichpapi_avail=`which papi_avail`
+     if test -f $whichpapi_avail
+      then
+        echo " Available Hardware counter events are:"
+        $whichpapi_avail | grep "Yes"
+     fi
+   elif [[ "$experiment_name" == "ossio" || "$experiment_name" == "ossiot" ]]; then
+     echo "            \"I/O functions to trace\"  - Specify the list of I/O functions to be traced when running the io or iot experiments."
+     echo "                                             For example: read,write,dup"
+   elif [[ "$experiment_name" == "ossmpi" || "$experiment_name" == "ossmpit" || "$experiment_name" == "ossmpiotf" ]]; then
+     echo "            \"MPI functions to trace\"  - Specify the list of MPI functions to be traced when running the mpi, mpit or mpiotf experiments."
+     echo "                                             For example: MPI_Send,MPI_Isend,MPI_Finalize"
+   fi
+   echo ""
+   exit
+elif [[ "$1" == "help" ||  "$1" == "--help" ]] 
+then
+   echo ""
+   echo "Usage: $0 \"executable\" [extra_args]"
+   echo "Usage: $0 help"
+   echo "    where \"executable\" is defined as the command that you normally use to "
+   echo "    execute your program: but in quotes"
+   echo ""
+   echo "For example: $0 \"mpirun -N 16 -n 256 ./smg2000 -n 50 50 50\" [extra_args]"
+   echo "    where the optional \"extra_args\" is defined as follows:"
+   echo "            \"high\"     - Increase the default sampling rate or "
+   echo "                           threshold value to increase the number of samples taken."
+   echo "            \"low\"      - Decrease the default sampling rate or threshold value to "
+   echo "                           decrease the number of samples taken."
+   echo "            \"default\"  - Use the default sampling rate or threshold value. This "
+   echo "                           will override any environment variable settings."
+   echo "            \"rate value\"  - Use this sampling rate or threshold value instead of "
+   echo "                              the default or any environment variable settings."
+   echo ""
+   exit
+fi
+
+
+if [ -z "$2" ] 
+then
+  if [ $debug_flag == 1 ]
+  then
+    echo "DEBUG: ossdriver command-line argument #2 was not specified"
+  fi
+else
+#
+# There is an argument 2
+#
+  if [ $debug_flag == 1 ]
+  then
+    echo "DEBUG: ossdriver command-line argument #2 = $2"
+  fi
+  if  [ "$2" == "high" ]
+  then
+     high_flag=1
+  elif  [ "$2" == "low" ]
+  then
+     low_flag=1
+  elif  [ "$2" == "default" ]
+  then
+     use_default_flag=1
+  else
+     match=0
+     if [[ "$experiment_name" == "osshwc" || "$experiment_name" == "osshwcsamp" || "$experiment_name" == "osshwctime" ]]; then
+       # check for PAPI_ in name 
+       match=`expr match "$2" 'PAPI_'`
+       if [ $match == 0 ]
+       then
+         case "$2" in
+           *[!0-9]*|"") 
+               if [ $debug_flag == 1 ]
+               then
+                  echo "DEBUG: NOT numbers only dollar 2 = $2  "
+               fi
+               match=1;
+               ;;
+           *) 
+               if [ $debug_flag == 1 ]
+               then
+                  echo "DEBUG: numbers only dollar 2 = $2  "
+               fi
+               match=0;
+               ;;
+         esac
+       fi
+
+       if [ $match == 0 ]
+       then
+
+          if [ $debug_flag == 1 ]
+          then
+            echo "DEBUG: $2 does NOT contain PAPI_ substring"
+          fi
+
+          # Do we assume it is the threshold, yes for now
+          input_argument_rate_threshold_value=$2
+
+       else 
+          if [ $debug_flag == 1 ]
+          then
+            echo "DEBUG: $2 contains PAPI_ substring, setting input_argument_event_or_trace_list_value=$2"
+          fi
+          input_argument_event_or_trace_list_value=$2
+       fi
+     else
+        if [[ "$experiment_name" == "ossio" || "$experiment_name" == "ossiot" ]]; then
+           input_argument_event_or_trace_list_value=$2
+        elif [[ "$experiment_name" == "ossmpi" || "$experiment_name" == "ossmpit" || "$experiment_name" == "ossmpiotf" ]]; then
+           input_argument_event_or_trace_list_value=$2
+        else
+           input_argument_rate_threshold_value=$2
+        fi
+     fi
+  fi
+
+fi
+
+# Look for argument 3
+
+if [ -z "$3" ] 
+then
+  if [ $debug_flag == 1 ]
+  then
+    echo "DEBUG: ossdriver command-line argument #3 was not specified"
+  fi
+else
+#
+# There is an argument 3
+#
+  if [ $debug_flag == 1 ]
+  then
+    echo "DEBUG: ossdriver command-line argument #3 = $3"
+  fi
+  if  [ "$3" == "high" ]
+  then
+     high_flag=1
+  elif  [ "$3" == "low" ]
+  then
+     low_flag=1
+  elif  [ "$3" == "default" ]
+  then
+     use_default_flag=1
+  else
+
+     if [[ "$experiment_name" == "osshwc" || "$experiment_name" == "osshwcsamp" || "$experiment_name" == "osshwctime" ]]; then
+        # We have seen the PAPI_event, so the next argument must be the threshold value
+        if [ $input_argument_event_or_trace_list_value != 0 ]
+        then
+          input_argument_rate_threshold_value=$3
+        else
+          match=`expr match "$3" 'PAPI_'`
+          if [ $match == 0 ]
+          then
+             case "$3" in
+               *[!0-9]*|"") 
+                  if [ $debug_flag == 1 ]
+                  then
+                     echo "DEBUG: NOT numbers only dollar 3 = $3  "
+                  fi
+                  match=1;
+                  ;;
+               *) 
+                  if [ $debug_flag == 1 ]
+                  then
+                     echo "DEBUG: umbers only dollar 3 = $3  "
+                  fi
+                  match=0;
+                  ;;
+             esac
+          fi
+          if [ $match == 0 ]
+          then
+            if [ use_default_flag == 0 ]
+            then 
+              if [[ "$experiment_name" == "osshwc" || "$experiment_name" == "osshwctime" ]]; then
+                 echo "[openss]: FATAL: Expected PAPI_<event_name> in this argument position.  $0 inferred that argument 2 was the papi threshold.  With that, argument 3 needs to be the papi event name.  For example: PAPI_TOT_CYC, etc."
+                 exit
+              elif [[ "$experiment_name" == "osshwcsamp" ]]; then
+                 echo "[openss]: FATAL: Expected PAPI_<event_name_list> in this argument position.  $0 inferred that argument 2 was the experiment sampling rate.  With that, argument 3 needs to be the papi event name or event name list .  For example: PAPI_TOT_CYC,PAPI_L1_DCM,PAPI_L1_DCA etc."
+                 exit
+              fi
+
+            else
+              echo "[openss]: WARNING: $0 expects no arguments after the \"default\" argument.   Argument 3 =\"$3\" is ignored."
+            fi
+          else
+            input_argument_event_or_trace_list_value=$3
+          fi
+        fi
+
+     fi
+  fi
+
+fi
+
+
+# Look for argument 4
+
+if [ -z "$4" ] 
+then
+  if [ $debug_flag == 1 ]
+  then
+    echo "DEBUG: ossdriver command-line argument #4 was not specified"
+  fi
+else
+#
+# There is an argument 4
+#
+  if [ $debug_flag == 1 ]
+  then
+    echo "DEBUG: ossdriver command-line argument #4 = $4"
+  fi
+
+fi
+
+
+# Look for argument 5
+
+if [ -z "$5" ] 
+then
+  if [ $debug_flag == 1 ]
+  then
+    echo "DEBUG: ossdriver command-line argument #5 was not specified"
+  fi
+else
+#
+# There is an argument 5
+#
+  if [ $debug_flag == 1 ]
+  then
+    echo "DEBUG: ossdriver command-line argument #5 = $5"
+  fi
+
+fi
+
+################################################################################
+# Run Open|SpeedShop
+################################################################################
+
+# Setup the OpenSpeedShop instrumentor variable (cbtf or offline)
+instrumentor=offline
+targetos=x86_64-unknown-linux-gnu
+
+if [ $debug_flag == 1 ]
+then
+  echo "DEBUG: experiment_name=$experiment_name"
+  echo "DEBUG: high_flag=$high_flag"
+  echo "DEBUG: low_flag=$low_flag"
+  echo "DEBUG: use_default_flag=$use_default_flag"
+  echo "DEBUG: input_argument_rate_threshold_value=$input_argument_rate_threshold_value"
+  echo "DEBUG: input_argument_event_or_trace_list_value=$input_argument_event_or_trace_list_value"
+  echo "DEBUG: input_argument_rate_threshold_value=$input_argument_rate_threshold_value"
+  echo "DEBUG: input_argument_oname=$input_argument_oname"
+  echo "DEBUG: use_compare_metric=$use_compare_metric"
+  echo "DEBUG: use_compare_viewtype=$use_compare_viewtype"
+  echo "DEBUG: instrumentor=$instrumentor"
+fi
+
+
+
+# ------------------------------------------------------------------------------------
+# -- PCSAMP EXPERIMENT SPECIFIC CODE -------------------------------------------------
+# ------------------------------------------------------------------------------------
+if [ $experiment_name == "osspcsamp" ]
+then
+
+  if [ $debug_flag == 1 ]
+  then 
+    if [ -z "$OPENSS_PCSAMP_RATE" ] 
+    then 
+      echo "DEBUG: in PCSAMP EXPERIMENT SECTION, NOT SET, OPENSS_PCSAMP_RATE=$OPENSS_PCSAMP_RATE"
+    else
+      echo "DEBUG: in PCSAMP EXPERIMENT SECTION, IS SET, OPENSS_PCSAMP_RATE=$OPENSS_PCSAMP_RATE"
+    fi
+  fi
+
+  if [ $low_flag == 1 ]
+  then
+     rate=$pcsamp_default_rate
+     let rate=rate/2
+     if [ -z "$OPENSS_PCSAMP_RATE" ] 
+     then
+       echo "[openss]: pcsamp experiment using sampling rate: \"$rate\" because the \"low\" parameter is specified."
+     else
+       echo "[openss]: pcsamp experiment OPENSS_PCSAMP_RATE=$OPENSS_PCSAMP_RATE is set and will be altered to \"$rate\" because the \"low\" parameter is specified."
+     fi
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: pcsamp, rate=$rate"
+     fi
+
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_PCSAMP_RATE=$rate
+       export CBTF_PCSAMP_RATE
+     fi
+
+     OPENSS_PCSAMP_RATE=$rate
+     export OPENSS_PCSAMP_RATE
+
+     if [ $debug_flag == 1 ]
+     then 
+        echo "DEBUG: in PCSAMP EXPERIMENT SECTION, RESET low, OPENSS_PCSAMP_RATE=$OPENSS_PCSAMP_RATE"
+     fi
+  elif [ $high_flag == 1 ]
+  then
+     rate=$pcsamp_default_rate
+     let rate=rate*4
+     if [ -z "$OPENSS_PCSAMP_RATE" ] 
+     then
+       echo "[openss]: pcsamp experiment using sampling rate: \"$rate\" because the \"high\" parameter is specified."
+     else
+       echo "[openss]: pcsamp experiment OPENSS_PCSAMP_RATE=$OPENSS_PCSAMP_RATE is set and will be altered to \"$rate\" because the \"high\" parameter is specified."
+     fi
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: pcsamp, rate=$rate"
+     fi
+
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_PCSAMP_RATE=$rate
+       export CBTF_PCSAMP_RATE
+     fi
+
+     OPENSS_PCSAMP_RATE=$rate
+     export OPENSS_PCSAMP_RATE
+
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: in PCSAMP EXPERIMENT SECTION, RESET high, OPENSS_PCSAMP_RATE=$OPENSS_PCSAMP_RATE"
+     fi
+  elif [ $use_default_flag == 1 ]
+  then
+     if [ -z "$OPENSS_PCSAMP_RATE" ] 
+     then
+       echo "[openss]: pcsamp experiment using sampling rate: \"$rate\" because the \"default\" parameter is specified."
+     else
+       if [ $pcsamp_default_rate != $OPENSS_PCSAMP_RATE ]
+       then
+         echo "[openss]: pcsamp experiment OPENSS_PCSAMP_RATE=$OPENSS_PCSAMP_RATE is set and will be altered to \"$pcsamp_default_rate\" because the \"default\" parameter is specified."
+       fi
+     fi
+     rate=$pcsamp_default_rate
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: pcsamp, default, rate=$rate"
+     fi
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_PCSAMP_RATE=$rate
+       export CBTF_PCSAMP_RATE
+     fi
+
+     OPENSS_PCSAMP_RATE=$rate
+     export OPENSS_PCSAMP_RATE
+
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: in PCSAMP EXPERIMENT SECTION, RESET default, OPENSS_PCSAMP_RATE=$OPENSS_PCSAMP_RATE"
+     fi
+  elif [ $input_argument_rate_threshold_value != 0 ]
+  then
+     if [ -z "$OPENSS_PCSAMP_RATE" ] 
+     then
+       echo "[openss]: pcsamp experiment using sampling rate: \"$input_argument_rate_threshold_value\" because \"rate value\" parameter is specified."
+     else
+       if [ $input_argument_rate_threshold_value != $OPENSS_PCSAMP_RATE ]
+       then
+         echo "[openss]: pcsamp experiment OPENSS_PCSAMP_RATE=$OPENSS_PCSAMP_RATE is set and will be altered to \"$input_argument_rate_threshold_value\" because the \"rate value\" parameter is specified."
+       fi
+     fi
+     rate=$input_argument_rate_threshold_value
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: pcsamp, input argument rate threshold value, rate=$rate"
+     fi
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_PCSAMP_RATE=$rate
+       export CBTF_PCSAMP_RATE
+     fi
+
+     OPENSS_PCSAMP_RATE=$rate
+     export OPENSS_PCSAMP_RATE
+
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: in PCSAMP EXPERIMENT SECTION, RESET input_argument_rate_threshold_value, OPENSS_PCSAMP_RATE=$OPENSS_PCSAMP_RATE"
+     fi
+     
+  else
+     if [ -z "$OPENSS_PCSAMP_RATE" ] 
+     then
+       echo "[openss]: pcsamp experiment using the pcsamp experiment default sampling rate: \"$pcsamp_default_rate\"."
+     else
+       echo "[openss]: pcsamp experiment OPENSS_PCSAMP_RATE=$OPENSS_PCSAMP_RATE is set and will be used as the sampling rate."
+     fi
+  fi 
+
+  if [ "$instrumentor" == "cbtf" ]
+  then
+    echo "[openss]: pcsamp experiment calling osscollect."
+    if [ "$targetos" == "cray-xk" -o "$targetos" == "cray-xe" ]
+    then
+       osscollect --arch cray --program "$1" --collector pcsamp
+    else
+       osscollect --program "$1" --collector pcsamp
+    fi
+  elif [ "$instrumentor" == "offline" ]
+  then
+    echo "[openss]: pcsamp experiment calling openss."
+    openss -offline -f "$1" pcsamp
+  else
+    echo "[openss]: pcsamp experiment calling nothing, else clause."
+  fi
+
+# ------------------------------------------------------------------------------------
+# -- USERTIME EXPERIMENT SPECIFIC CODE -------------------------------------------------
+# ------------------------------------------------------------------------------------
+elif  [ $experiment_name == "ossusertime" ]
+then
+
+  if [ $debug_flag == 1 ]
+  then
+    if [ -z "$OPENSS_USERTIME_RATE" ] 
+    then
+      echo "DEBUG: in USERTIME EXPERIMENT SECTION, NOT SET, OPENSS_USERTIME_RATE=$OPENSS_USERTIME_RATE"
+    else
+      echo "DEBUG: in USERTIME EXPERIMENT SECTION, IS SET, OPENSS_USERTIME_RATE=$OPENSS_USERTIME_RATE"
+    fi
+  fi
+
+  if [ $low_flag == 1 ]
+  then
+     rate=$usertime_default_rate
+     let rate=rate/2
+     if [ -z "$OPENSS_USERTIME_RATE" ] 
+     then
+       echo "[openss]: usertime experiment using sampling rate: \"$rate\" because the \"low\" parameter is specified."
+     else
+       echo "[openss]: usertime experiment OPENSS_USERTIME_RATE=$OPENSS_USERTIME_RATE is set and will be altered to \"$rate\" because the \"low\" parameter is specified."
+     fi
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: rate=$rate"
+     fi
+
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_USERTIME_RATE=$rate
+       export CBTF_USERTIME_RATE
+     fi
+
+     OPENSS_USERTIME_RATE=$rate
+     export OPENSS_USERTIME_RATE
+
+     if [ $debug_flag == 1 ]
+     then 
+        echo "DEBUG: in USERTIME EXPERIMENT SECTION, RESET low, OPENSS_USERTIME_RATE=$OPENSS_USERTIME_RATE"
+     fi
+  elif [ $high_flag == 1 ]
+  then
+     rate=$usertime_default_rate
+#     rate=$OPENSS_USERTIME_RATE
+     let rate=rate*4
+     if [ -z "$OPENSS_USERTIME_RATE" ] 
+     then
+       echo "[openss]: usertime experiment using sampling rate: \"$rate\" because the \"high\" parameter is specified."
+     else
+       echo "[openss]: usertime experiment OPENSS_USERTIME_RATE=$OPENSS_USERTIME_RATE is set and will be altered to \"$rate\" because the \"high\" parameter is specified."
+     fi
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: rate=$rate"
+     fi
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_USERTIME_RATE=$rate
+       export CBTF_USERTIME_RATE
+     fi
+
+     OPENSS_USERTIME_RATE=$rate
+     export OPENSS_USERTIME_RATE
+
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: in USERTIME EXPERIMENT SECTION, RESET high, OPENSS_USERTIME_RATE=$OPENSS_USERTIME_RATE"
+     fi
+  elif [ $use_default_flag == 1 ]
+  then
+     if [ -z "$OPENSS_USERTIME_RATE" ] 
+     then
+
+       echo "[openss]: usertime experiment using sampling rate: \"$rate\" because the \"default\" parameter is specified."
+
+     else
+
+       if [ $usertime_default_rate != $OPENSS_USERTIME_RATE ]
+       then
+         echo "[openss]: usertime experiment OPENSS_USERTIME_RATE=$OPENSS_USERTIME_RATE is set and will be altered to \"$usertime_default_rate\" because the \"default\" parameter is specified."
+       fi
+     fi
+
+     rate=$usertime_default_rate
+     echo "DEBUG: rate=$rate"
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_USERTIME_RATE=$rate
+       export CBTF_USERTIME_RATE
+     fi
+
+     OPENSS_USERTIME_RATE=$rate
+     export OPENSS_USERTIME_RATE
+
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: in USERTIME EXPERIMENT SECTION, RESET default, OPENSS_USERTIME_RATE=$OPENSS_USERTIME_RATE"
+     fi
+  elif [ $input_argument_rate_threshold_value != 0 ]
+  then
+     if [ -z "$OPENSS_USERTIME_RATE" ] 
+     then
+       echo "[openss]: usertime experiment using sampling rate: \"$input_argument_rate_threshold_value\" because \"rate value\" parameter is specified."
+     else
+       if [ $input_argument_rate_threshold_value != $OPENSS_USERTIME_RATE ]
+       then
+         echo "[openss]: usertime experiment OPENSS_USERTIME_RATE=$OPENSS_USERTIME_RATE is set and will be altered to \"$input_argument_rate_threshold_value\" because the \"rate value\" parameter is specified."
+       fi
+     fi
+     rate=$input_argument_rate_threshold_value
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: rate=$rate"
+     fi
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_USERTIME_RATE=$rate
+       export CBTF_USERTIME_RATE
+     fi
+
+     OPENSS_USERTIME_RATE=$rate
+     export OPENSS_USERTIME_RATE
+
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: in USERTIME EXPERIMENT SECTION, RESET input_argument_rate_threshold_value, OPENSS_USERTIME_RATE=$OPENSS_USERTIME_RATE"
+     fi
+  else
+     if [ -z "$OPENSS_USERTIME_RATE" ] 
+     then
+       echo "[openss]: usertime experiment using the usertime experiment default sampling rate: \"$usertime_default_rate\"."
+     else
+       echo "[openss]: usertime experiment OPENSS_USERTIME_RATE=$OPENSS_USERTIME_RATE is set and will be used as the sampling rate."
+     fi
+  fi 
+
+  if [ "$instrumentor" == "cbtf" ]
+  then
+    echo "[openss]: usertime experiment calling osscollect."
+    if [ "$targetos" == "cray-xk" -o "$targetos" == "cray-xe" ]
+    then
+       osscollect --arch cray --program "$1" --collector usertime
+    else
+       osscollect --program "$1" --collector usertime
+    fi
+  elif [ "$instrumentor" == "offline" ]
+  then
+    echo "[openss]: usertime experiment calling openss."
+    openss -offline -f "$1" usertime
+  else
+    echo "[openss]: usertime experiment calling nothing, else clause."
+  fi
+
+# ------------------------------------------------------------------------------------
+# -- HWC EXPERIMENT SPECIFIC CODE -------------------------------------------------
+# ------------------------------------------------------------------------------------
+elif  [ $experiment_name == "osshwc" ]
+then
+
+  if [ $debug_flag == 1 ]
+  then
+
+    if [ -z "$OPENSS_HWC_EVENT" ] 
+    then
+      echo "DEBUG: in HWC EXPERIMENT SECTION, NOT SET, OPENSS_HWC_EVENT=$OPENSS_HWC_EVENT"
+    else
+      echo "DEBUG: in HWC EXPERIMENT SECTION, IS SET, OPENSS_HWC_EVENT=$OPENSS_HWC_EVENT"
+    fi
+
+    if [ -z "$OPENSS_HWC_THRESHOLD" ] 
+    then
+      echo "DEBUG: in HWC EXPERIMENT SECTION, NOT SET, OPENSS_HWC_THRESHOLD=$OPENSS_HWC_THRESHOLD"
+    else
+      echo "DEBUG: in HWC EXPERIMENT SECTION, IS SET, OPENSS_HWC_THRESHOLD=$OPENSS_HWC_THRESHOLD"
+    fi
+
+  fi
+
+  if [ $low_flag == 1 ]
+  then
+     threshold=$hwc_default_threshold
+     let threshold=threshold/2
+     if [ -z "$OPENSS_HWC_THRESHOLD" ] 
+     then
+       if [ -z "$OPENSS_HWC_EVENT" ] 
+       then
+         echo "[openss]: hwc experiment using default papi event: \"$hwc_default_event\"."
+         echo "[openss]: hwc experiment using sampling threshold: \"$threshold\" because the \"low\" parameter is specified."
+       else
+         echo "[openss]: hwc experiment using papi event: \"$OPENSS_HWC_EVENT\" because the OPENSS_HWC_EVENT environment variable is set."
+         echo "[openss]: hwc experiment using sampling threshold: \"$threshold\" because the \"low\" parameter is specified."
+       fi
+     else
+       if [ -z "$OPENSS_HWC_EVENT" ] 
+       then
+         echo "[openss]: hwc experiment using default papi event: \"$hwc_default_event\"."
+         echo "[openss]: hwc experiment OPENSS_HWC_THRESHOLD=$OPENSS_HWC_THRESHOLD is set and will be altered to \"$threshold\" because the \"low\" parameter is specified."
+       else
+         echo "[openss]: hwc experiment using papi event: \"$OPENSS_HWC_EVENT\" because the OPENSS_HWC_EVENT environment variable is set."
+         echo "[openss]: hwc experiment OPENSS_HWC_THRESHOLD=$OPENSS_HWC_THRESHOLD is set and will be altered to \"$threshold\" because the \"low\" parameter is specified."
+       fi
+     fi
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: threshold=$threshold"
+     fi
+
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_HWC_THRESHOLD=$threshold
+       export CBTF_HWC_THRESHOLD
+     fi
+
+     OPENSS_HWC_THRESHOLD=$threshold
+     export OPENSS_HWC_THRESHOLD
+
+     if [ $debug_flag == 1 ]
+     then 
+        echo "DEBUG: in HWC EXPERIMENT SECTION, RESET low, OPENSS_HWC_THRESHOLD=$OPENSS_HWC_THRESHOLD"
+     fi
+  elif [ $high_flag == 1 ]
+  then
+     threshold=$hwc_default_threshold
+#     threshold=$OPENSS_HWC_THRESHOLD
+     let threshold=threshold*4
+     if [ -z "$OPENSS_HWC_THRESHOLD" ] 
+     then
+       if [ -z "$OPENSS_HWC_EVENT" ] 
+       then
+         echo "[openss]: hwc experiment using default papi event: \"$hwc_default_event\"."
+         echo "[openss]: hwc experiment using sampling threshold: \"$threshold\" because the \"high\" parameter is specified."
+       else
+         echo "[openss]: hwc experiment using papi event: \"$OPENSS_HWC_EVENT\" because the OPENSS_HWC_EVENT environment variable is set."
+         echo "[openss]: hwc experiment using sampling threshold: \"$threshold\" because the \"high\" parameter is specified."
+       fi
+     else
+       if [ -z "$OPENSS_HWC_EVENT" ] 
+       then
+         echo "[openss]: hwc experiment using default papi event: \"$hwc_default_event\"."
+         echo "[openss]: hwc experiment OPENSS_HWC_THRESHOLD=$OPENSS_HWC_THRESHOLD is set and will be altered to \"$threshold\" because the \"high\" parameter is specified."
+       else
+         echo "[openss]: hwc experiment using papi event: \"$OPENSS_HWC_EVENT\" because the OPENSS_HWC_EVENT environment variable is set."
+         echo "[openss]: hwc experiment OPENSS_HWC_THRESHOLD=$OPENSS_HWC_THRESHOLD is set and will be altered to \"$threshold\" because the \"high\" parameter is specified."
+       fi
+     fi
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: hwc, high parameter section, threshold=$threshold"
+     fi
+
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_HWC_THRESHOLD=$threshold
+       export CBTF_HWC_THRESHOLD
+     fi
+
+     OPENSS_HWC_THRESHOLD=$threshold
+     export OPENSS_HWC_THRESHOLD
+
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: in HWC EXPERIMENT SECTION, RESET high, OPENSS_HWC_THRESHOLD=$OPENSS_HWC_THRESHOLD"
+     fi
+  elif [ $use_default_flag == 1 ]
+  then
+     if [ -z "$OPENSS_HWC_THRESHOLD" ] 
+     then
+       if [ -z "$OPENSS_HWC_EVENT" ] 
+       then
+         echo "[openss]: hwc experiment using default papi event: \"$hwc_default_event\" because the \"default\" parameter is specified."
+         echo "[openss]: hwc experiment using default sampling threshold: \"$hwc_default_threshold\" because the \"default\" parameter is specified."
+       else
+         echo "[openss]: hwc experiment using default papi event overriding the OPENSS_HWC_EVENT environment variable=\"$OPENSS_HWC_EVENT\" setting because the \"default\" parameter is specified."
+         echo "[openss]: hwc experiment using default sampling threshold: \"$hwc_default_threshold\" because the \"default\" parameter is specified."
+       fi
+     else
+       if [ $hwc_default_threshold != $OPENSS_HWC_THRESHOLD ]
+       then
+         if [ -z "$OPENSS_HWC_EVENT" ] 
+         then
+           echo "[openss]: hwc experiment using default papi event: \"$hwc_default_event\" because the \"default\" parameter is specified."
+           echo "[openss]: hwc experiment using default sampling threshold: \"$hwc_default_threshold\" overriding the OPENSS_HWC_THRESHOLD=$OPENSS_HWC_THRESHOLD environment variable because the \"default\" parameter is specified."
+         else
+           echo "[openss]: hwc experiment using default papi event overriding the OPENSS_HWC_EVENT environment variable=\"$OPENSS_HWC_EVENT\" setting because the \"default\" parameter is specified."
+           echo "[openss]: hwc experiment using default sampling threshold: \"$hwc_default_threshold\" overriding the OPENSS_HWC_THRESHOLD=$OPENSS_HWC_THRESHOLD environment variable because the \"default\" parameter is specified."
+         fi
+       fi
+     fi
+
+     threshold=$hwc_default_threshold
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: hwc, default case, threshold=$threshold"
+     fi
+
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_HWC_THRESHOLD=$threshold
+       export CBTF_HWC_THRESHOLD
+     fi
+
+     OPENSS_HWC_THRESHOLD=$threshold
+     export OPENSS_HWC_THRESHOLD
+
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: in HWC EXPERIMENT SECTION, RESET default, OPENSS_HWC_THRESHOLD=$OPENSS_HWC_THRESHOLD"
+     fi
+  elif [ $input_argument_rate_threshold_value != 0 ]
+  then
+     if [ -z "$OPENSS_HWC_THRESHOLD" ] 
+     then
+       if [ -z "$OPENSS_HWC_EVENT" ] 
+       then
+         if [ $input_argument_event_or_trace_list_value != 0 ]
+         then
+           echo "[openss]: hwc experiment using input papi event: \"$input_argument_event_or_trace_list_value\"."
+         else
+           echo "[openss]: hwc experiment using default papi event: \"$hwc_default_event\"."
+         fi
+         echo "[openss]: hwc experiment using sampling threshold: \"$input_argument_rate_threshold_value\" because \"rate value\" parameter is specified."
+       else
+         if [ $input_argument_event_or_trace_list_value != 0 ]
+         then
+           echo "[openss]: hwc experiment using input papi event: \"$input_argument_event_or_trace_list_value\"."
+         else
+           echo "[openss]: hwc experiment using papi event: \"$OPENSS_HWC_EVENT\" because the OPENSS_HWC_EVENT environment variable is set."
+         fi
+         echo "[openss]: hwc experiment using sampling threshold: \"$input_argument_rate_threshold_value\" because \"rate value\" parameter is specified."
+       fi
+     else
+       if [ $input_argument_rate_threshold_value != $OPENSS_HWC_THRESHOLD ]
+       then
+         if [ -z "$OPENSS_HWC_EVENT" ] 
+         then
+           if [ $input_argument_event_or_trace_list_value != 0 ]
+           then
+             echo "[openss]: hwc experiment using input papi event: \"$input_argument_event_or_trace_list_value\"."
+           else
+             echo "[openss]: hwc experiment using default papi event: \"$hwc_default_event\"."
+           fi
+           echo "[openss]: hwc experiment OPENSS_HWC_THRESHOLD=$OPENSS_HWC_THRESHOLD is set and will be altered to \"$input_argument_rate_threshold_value\" because the \"rate value\" parameter is specified."
+         else
+           if [ $input_argument_event_or_trace_list_value != 0 ]
+           then
+             echo "[openss]: hwc experiment using input papi event: \"$input_argument_event_or_trace_list_value\"."
+           else
+             echo "[openss]: hwc experiment using papi event: \"$OPENSS_HWC_EVENT\" because the OPENSS_HWC_EVENT environment variable is set."
+           fi
+           echo "[openss]: hwc experiment OPENSS_HWC_THRESHOLD=$OPENSS_HWC_THRESHOLD is set and will be altered to \"$input_argument_rate_threshold_value\" because the \"rate value\" parameter is specified."
+         fi
+       fi
+     fi
+     threshold=$input_argument_rate_threshold_value
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: threshold=$threshold"
+     fi
+
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_HWC_THRESHOLD=$threshold
+       export CBTF_HWC_THRESHOLD
+     fi
+
+     OPENSS_HWC_THRESHOLD=$threshold
+     export OPENSS_HWC_THRESHOLD
+
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: in HWC EXPERIMENT SECTION, RESET input_argument_rate_threshold_value, OPENSS_HWC_THRESHOLD=$OPENSS_HWC_THRESHOLD"
+     fi
+  else
+     # An input Threshold was not specified
+     if [ -z "$OPENSS_HWC_THRESHOLD" ] 
+     then
+       if [ -z "$OPENSS_HWC_EVENT" ] 
+       then
+         if [ $input_argument_event_or_trace_list_value != 0 ]
+         then 
+           echo "[openss]: hwc experiment using input papi event: \"$input_argument_event_or_trace_list_value\"."
+           echo "[openss]: hwc experiment using the hwc experiment default sampling threshold: \"$hwc_default_threshold\"."
+         else
+           echo "[openss]: hwc experiment using default papi event: \"$hwc_default_event\"."
+           echo "[openss]: hwc experiment using the hwc experiment default sampling threshold: \"$hwc_default_threshold\"."
+         fi
+       else
+         # OPENSS_HWC_EVENT was set
+         if [ $input_argument_event_or_trace_list_value != 0 ]
+         then 
+           echo "[openss]: hwc experiment using input papi event: \"$input_argument_event_or_trace_list_value\"."
+           echo "[openss]: hwc experiment using the hwc experiment default sampling threshold: \"$hwc_default_threshold\"."
+         else
+           echo "[openss]: hwc experiment using papi event: \"$OPENSS_HWC_EVENT\" because the OPENSS_HWC_EVENT environment variable is set."
+           echo "[openss]: hwc experiment using the hwc experiment default sampling threshold: \"$hwc_default_threshold\"."
+         fi
+       fi
+     else
+       # The threshold environment variable was set
+       if [ -z "$OPENSS_HWC_EVENT" ] 
+       then
+         if [ $input_argument_event_or_trace_list_value != 0 ]
+         then 
+           echo "[openss]: hwc experiment using input papi event: \"$input_argument_event_or_trace_list_value\"."
+           echo "[openss]: hwc experiment OPENSS_HWC_THRESHOLD=$OPENSS_HWC_THRESHOLD is set and will be used as the sampling threshold."
+         else
+           echo "[openss]: hwc experiment using default papi event: \"$hwc_default_event\"."
+           echo "[openss]: hwc experiment OPENSS_HWC_THRESHOLD=$OPENSS_HWC_THRESHOLD is set and will be used as the sampling threshold."
+         fi
+       else
+         if [ $input_argument_event_or_trace_list_value != 0 ]
+         then 
+           echo "[openss]: hwc experiment using input papi event: \"$input_argument_event_or_trace_list_value\"."
+           echo "[openss]: hwc experiment OPENSS_HWC_THRESHOLD=$OPENSS_HWC_THRESHOLD is set and will be used as the sampling threshold."
+         else
+           echo "[openss]: hwc experiment using papi event: \"$OPENSS_HWC_EVENT\" because the OPENSS_HWC_EVENT environment variable is set."
+           echo "[openss]: hwc experiment OPENSS_HWC_THRESHOLD=$OPENSS_HWC_THRESHOLD is set and will be used as the sampling threshold."
+         fi
+       fi
+     fi
+  fi 
+
+# The messages above should reflect whether this is set or not.  Now export the input event, if it was specified
+  if [ $input_argument_event_or_trace_list_value != 0 ]
+  then 
+
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_HWC_EVENT=$input_argument_event_or_trace_list_value
+       export CBTF_HWC_EVENT
+     fi
+
+     OPENSS_HWC_EVENT=$input_argument_event_or_trace_list_value
+     export OPENSS_HWC_EVENT
+  fi
+
+  if [ $debug_flag == 1 ] 
+  then
+    echo "DEBUG: about to run \"openss -offline -f "$1" hwc, OPENSS_HWC_EVENT=$OPENSS_HWC_EVENT"
+    echo "DEBUG: about to run \"openss -offline -f "$1" hwc, OPENSS_HWC_THRESHOLD=$OPENSS_HWC_THRESHOLD"
+  fi
+
+
+  if [ "$instrumentor" == "cbtf" ]
+  then
+    echo "[openss]: hwc experiment calling osscollect."
+    if [ "$targetos" == "cray-xk" -o "$targetos" == "cray-xe" ]
+    then
+       osscollect --arch cray --program "$1" --collector hwc
+    else
+       osscollect --program "$1" --collector hwc
+    fi
+  elif [ "$instrumentor" == "offline" ]
+  then
+    echo "[openss]: hwc experiment calling openss."
+    openss -offline -f "$1" hwc
+  else
+    echo "[openss]: hwc experiment calling nothing, else clause."
+  fi
+
+
+# ------------------------------------------------------------------------------------
+# -- HWCSAMP EXPERIMENT SPECIFIC CODE -------------------------------------------------
+# ------------------------------------------------------------------------------------
+elif  [ $experiment_name == "osshwcsamp" ]
+then
+
+  if [ $debug_flag == 1 ]
+  then
+    if [ -z "$OPENSS_HWCSAMP_EVENTS" ] 
+    then
+      echo "DEBUG: in HWCSAMP EXPERIMENT SECTION, NOT SET, OPENSS_HWCSAMP_EVENTS=$OPENSS_HWCSAMP_EVENTS"
+    else
+      echo "DEBUG: in HWCSAMP EXPERIMENT SECTION, IS SET, OPENSS_HWCSAMP_EVENTS=$OPENSS_HWCSAMP_EVENTS"
+    fi
+
+    if [ -z "$OPENSS_HWCSAMP_RATE" ] 
+    then
+      echo "DEBUG: in HWCSAMP EXPERIMENT SECTION, NOT SET, OPENSS_HWCSAMP_RATE=$OPENSS_HWCSAMP_RATE"
+    else
+      echo "DEBUG: in HWCSAMP EXPERIMENT SECTION, IS SET, OPENSS_HWCSAMP_RATE=$OPENSS_HWCSAMP_RATE"
+    fi
+  fi
+
+  if [ $low_flag == 1 ]
+  then
+     sampling_rate=$hwcsamp_default_rate
+     let sampling_rate=sampling_rate/2
+     if [ -z "$OPENSS_HWCSAMP_RATE" ] 
+     then
+       if [ -z "$OPENSS_HWCSAMP_EVENTS" ] 
+       then
+         echo "[openss]: hwcsamp experiment using default papi event: \"$hwcsamp_default_events\"."
+         echo "[openss]: hwcsamp experiment using sampling_rate: \"$sampling_rate\" because the \"low\" parameter is specified."
+       else
+         echo "[openss]: hwcsamp experiment using papi event: \"$OPENSS_HWCSAMP_EVENTS\" because the OPENSS_HWCSAMP_EVENTS environment variable is set."
+         echo "[openss]: hwcsamp experiment using sampling_rate: \"$sampling_rate\" because the \"low\" parameter is specified."
+       fi
+     else
+       if [ -z "$OPENSS_HWCSAMP_EVENTS" ] 
+       then
+         echo "[openss]: hwcsamp experiment using default papi event: \"$hwcsamp_default_events\"."
+         echo "[openss]: hwcsamp experiment OPENSS_HWCSAMP_RATE=$OPENSS_HWCSAMP_RATE is set and will be altered to \"$sampling_rate\" because the \"low\" parameter is specified."
+       else
+         echo "[openss]: hwcsamp experiment using papi event: \"$OPENSS_HWCSAMP_EVENTS\" because the OPENSS_HWCSAMP_EVENTS environment variable is set."
+         echo "[openss]: hwcsamp experiment OPENSS_HWCSAMP_RATE=$OPENSS_HWCSAMP_RATE is set and will be altered to \"$sampling_rate\" because the \"low\" parameter is specified."
+       fi
+     fi
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: sampling_rate=$sampling_rate"
+     fi
+
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_HWCSAMP_RATE=$sampling_rate
+       export CBTF_HWCSAMP_RATE
+     fi
+
+     OPENSS_HWCSAMP_RATE=$sampling_rate
+     export OPENSS_HWCSAMP_RATE
+
+     if [ $debug_flag == 1 ]
+     then 
+        echo "DEBUG: in HWCSAMP EXPERIMENT SECTION, RESET low, OPENSS_HWCSAMP_RATE=$OPENSS_HWCSAMP_RATE"
+     fi
+  elif [ $high_flag == 1 ]
+  then
+     sampling_rate=$hwcsamp_default_rate
+#     sampling_rate=$OPENSS_HWCSAMP_RATE
+     let sampling_rate=sampling_rate*4
+     if [ -z "$OPENSS_HWCSAMP_RATE" ] 
+     then
+       if [ -z "$OPENSS_HWCSAMP_EVENTS" ] 
+       then
+         echo "[openss]: hwcsamp experiment using default papi event: \"$hwcsamp_default_events\"."
+         echo "[openss]: hwcsamp experiment using sampling_rate: \"$sampling_rate\" because the \"high\" parameter is specified."
+       else
+         echo "[openss]: hwcsamp experiment using papi event: \"$OPENSS_HWCSAMP_EVENTS\" because the OPENSS_HWCSAMP_EVENTS environment variable is set."
+         echo "[openss]: hwcsamp experiment using sampling_rate: \"$sampling_rate\" because the \"high\" parameter is specified."
+       fi
+     else
+       if [ -z "$OPENSS_HWCSAMP_EVENTS" ] 
+       then
+         echo "[openss]: hwcsamp experiment using default papi event: \"$hwcsamp_default_events\"."
+         echo "[openss]: hwcsamp experiment OPENSS_HWCSAMP_RATE=$OPENSS_HWCSAMP_RATE is set and will be altered to \"$sampling_rate\" because the \"high\" parameter is specified."
+       else
+         echo "[openss]: hwcsamp experiment using papi event: \"$OPENSS_HWCSAMP_EVENTS\" because the OPENSS_HWCSAMP_EVENTS environment variable is set."
+         echo "[openss]: hwcsamp experiment OPENSS_HWCSAMP_RATE=$OPENSS_HWCSAMP_RATE is set and will be altered to \"$sampling_rate\" because the \"high\" parameter is specified."
+       fi
+     fi
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: sampling_rate=$sampling_rate"
+     fi
+
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_HWCSAMP_RATE=$sampling_rate
+       export CBTF_HWCSAMP_RATE
+     fi
+
+     OPENSS_HWCSAMP_RATE=$sampling_rate
+     export OPENSS_HWCSAMP_RATE
+
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: in HWCSAMP EXPERIMENT SECTION, RESET high, OPENSS_HWCSAMP_RATE=$OPENSS_HWCSAMP_RATE"
+     fi
+  elif [ $use_default_flag == 1 ]
+  then
+     if [ -z "$OPENSS_HWCSAMP_RATE" ] 
+     then
+       if [ -z "$OPENSS_HWCSAMP_EVENTS" ] 
+       then
+         echo "[openss]: hwcsamp experiment using default papi event: \"$hwcsamp_default_events\" because the \"default\" parameter is specified."
+         echo "[openss]: hwcsamp experiment using default sampling_rate: \"$hwcsamp_default_rate\" because the \"default\" parameter is specified."
+       else
+         echo "[openss]: hwcsamp experiment using default papi events overriding the OPENSS_HWCSAMP_EVENTS environment variable=\"$OPENSS_HWCSAMP_EVENTS\" setting because the \"default\" parameter is specified."
+         echo "[openss]: hwcsamp experiment using default sampling_rate: \"$hwcsamp_default_rate\" because the \"default\" parameter is specified."
+       fi
+     else
+       if [ $hwcsamp_default_rate != $OPENSS_HWCSAMP_RATE ]
+       then
+         if [ -z "$OPENSS_HWCSAMP_EVENTS" ] 
+         then
+           echo "[openss]: hwcsamp experiment using default papi event: \"$hwcsamp_default_events\" because the \"default\" parameter is specified."
+           echo "[openss]: hwcsamp experiment using default sampling_rate: \"$hwcsamp_default_rate\" overriding the OPENSS_HWCSAMP_RATE=$OPENSS_HWCSAMP_RATE environment variable because the \"default\" parameter is specified."
+         else
+           echo "[openss]: hwcsamp experiment using default papi events overriding the OPENSS_HWCSAMP_EVENTS environment variable=\"$OPENSS_HWCSAMP_EVENTS\" setting because the \"default\" parameter is specified."
+           echo "[openss]: hwcsamp experiment using default sampling_rate: \"$hwcsamp_default_rate\" overriding the OPENSS_HWCSAMP_RATE=$OPENSS_HWCSAMP_RATE environment variable because the \"default\" parameter is specified."
+         fi
+       fi
+     fi
+
+     sampling_rate=$hwcsamp_default_rate
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: sampling_rate=$sampling_rate"
+     fi
+
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_HWCSAMP_RATE=$sampling_rate
+       export CBTF_HWCSAMP_RATE
+     fi
+
+     OPENSS_HWCSAMP_RATE=$sampling_rate
+     export OPENSS_HWCSAMP_RATE
+
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: in HWCSAMP EXPERIMENT SECTION, RESET default, OPENSS_HWCSAMP_RATE=$OPENSS_HWCSAMP_RATE"
+     fi
+  elif [ $input_argument_rate_threshold_value != 0 ]
+  then
+     if [ -z "$OPENSS_HWCSAMP_RATE" ] 
+     then
+       if [ -z "$OPENSS_HWCSAMP_EVENTS" ] 
+       then
+         if [ $input_argument_event_or_trace_list_value != 0 ]
+         then
+           echo "[openss]: hwcsamp experiment using input papi event: \"$input_argument_event_or_trace_list_value\"."
+         else
+           echo "[openss]: hwcsamp experiment using default papi event: \"$hwcsamp_default_events\"."
+         fi
+         echo "[openss]: hwcsamp experiment using sampling_rate: \"$input_argument_rate_threshold_value\" because \"rate value\" parameter is specified."
+       else
+         if [ $input_argument_event_or_trace_list_value != 0 ]
+         then
+           echo "[openss]: hwcsamp experiment using input papi event: \"$input_argument_event_or_trace_list_value\"."
+         else
+           echo "[openss]: hwcsamp experiment using papi event: \"$OPENSS_HWCSAMP_EVENTS\" because the OPENSS_HWCSAMP_EVENTS environment variable is set."
+         fi
+         echo "[openss]: hwcsamp experiment using sampling_rate: \"$input_argument_rate_threshold_value\" because \"rate value\" parameter is specified."
+       fi
+     else
+       if [ $input_argument_rate_threshold_value != $OPENSS_HWCSAMP_RATE ]
+       then
+         if [ -z "$OPENSS_HWCSAMP_EVENTS" ] 
+         then
+           if [ $input_argument_event_or_trace_list_value != 0 ]
+           then
+             echo "[openss]: hwcsamp experiment using input papi event: \"$input_argument_event_or_trace_list_value\"."
+           else
+             echo "[openss]: hwcsamp experiment using default papi event: \"$hwcsamp_default_events\"."
+           fi
+           echo "[openss]: hwcsamp experiment OPENSS_HWCSAMP_RATE=$OPENSS_HWCSAMP_RATE is set and will be altered to \"$input_argument_rate_threshold_value\" because the \"rate value\" parameter is specified."
+         else
+           if [ $input_argument_event_or_trace_list_value != 0 ]
+           then
+             echo "[openss]: hwcsamp experiment using input papi event: \"$input_argument_event_or_trace_list_value\"."
+           else
+             echo "[openss]: hwcsamp experiment using papi event: \"$OPENSS_HWCSAMP_EVENTS\" because the OPENSS_HWCSAMP_EVENTS environment variable is set."
+           fi
+           echo "[openss]: hwcsamp experiment OPENSS_HWCSAMP_RATE=$OPENSS_HWCSAMP_RATE is set and will be altered to \"$input_argument_rate_threshold_value\" because the \"rate value\" parameter is specified."
+         fi
+       fi
+     fi
+     sampling_rate=$input_argument_rate_threshold_value
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: sampling_rate=$sampling_rate"
+     fi
+
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_HWCSAMP_RATE=$sampling_rate
+       export CBTF_HWCSAMP_RATE
+     fi
+
+     OPENSS_HWCSAMP_RATE=$sampling_rate
+     export OPENSS_HWCSAMP_RATE
+
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: in HWCSAMP EXPERIMENT SECTION, RESET input_argument_rate_threshold_value, OPENSS_HWCSAMP_RATE=$OPENSS_HWCSAMP_RATE"
+     fi
+  else
+     # An input Threshold was not specified
+     if [ -z "$OPENSS_HWCSAMP_RATE" ] 
+     then
+       if [ -z "$OPENSS_HWCSAMP_EVENTS" ] 
+       then
+         if [ $input_argument_event_or_trace_list_value != 0 ]
+         then 
+           echo "[openss]: hwcsamp experiment using input papi event: \"$input_argument_event_or_trace_list_value\"."
+           echo "[openss]: hwcsamp experiment using the hwc experiment default sampling_rate: \"$hwcsamp_default_rate\"."
+         else
+           echo "[openss]: hwcsamp experiment using default papi event: \"$hwcsamp_default_events\"."
+           echo "[openss]: hwcsamp experiment using the hwcsamp experiment default sampling_rate: \"$hwcsamp_default_rate\"."
+         fi
+       else
+         # OPENSS_HWCSAMP_EVENTS was set
+         if [ $input_argument_event_or_trace_list_value != 0 ]
+         then 
+           echo "[openss]: hwcsamp experiment using input papi event: \"$input_argument_event_or_trace_list_value\"."
+           echo "[openss]: hwcsamp experiment using the hwcsamp experiment default sampling_rate: \"$hwcsamp_default_rate\"."
+         else
+           echo "[openss]: hwcsamp experiment using papi event: \"$OPENSS_HWCSAMP_EVENTS\" because the OPENSS_HWCSAMP_EVENTS environment variable is set."
+           echo "[openss]: hwcsamp experiment using the hwcsamp experiment default sampling_rate: \"$hwcsamp_default_rate\"."
+         fi
+       fi
+     else
+       # The sampling_rate environment variable was set
+       if [ -z "$OPENSS_HWCSAMP_EVENTS" ] 
+       then
+         if [ $input_argument_event_or_trace_list_value != 0 ]
+         then 
+           echo "[openss]: hwcsamp experiment using input papi event: \"$input_argument_event_or_trace_list_value\"."
+           echo "[openss]: hwcsamp experiment OPENSS_HWCSAMP_RATE=$OPENSS_HWCSAMP_RATE is set and will be used as the sampling_rate."
+         else
+           echo "[openss]: hwcsamp experiment using default papi event: \"$hwcsamp_default_events\"."
+           echo "[openss]: hwcsamp experiment OPENSS_HWCSAMP_RATE=$OPENSS_HWCSAMP_RATE is set and will be used as the sampling_rate."
+         fi
+       else
+         if [ $input_argument_event_or_trace_list_value != 0 ]
+         then 
+           echo "[openss]: hwcsamp experiment using input papi event: \"$input_argument_event_or_trace_list_value\"."
+           echo "[openss]: hwcsamp experiment OPENSS_HWCSAMP_RATE=$OPENSS_HWCSAMP_RATE is set and will be used as the sampling_rate."
+         else
+           echo "[openss]: hwcsamp experiment using papi event: \"$OPENSS_HWCSAMP_EVENTS\" because the OPENSS_HWCSAMP_EVENTS environment variable is set."
+           echo "[openss]: hwcsamp experiment OPENSS_HWCSAMP_RATE=$OPENSS_HWCSAMP_RATE is set and will be used as the sampling_rate."
+         fi
+       fi
+     fi
+  fi 
+
+# The messages above should reflect whether this is set or not.  Now export the input event, if it was specified
+  if [ $input_argument_event_or_trace_list_value != 0 ]
+  then 
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_HWCSAMP_EVENTS=$input_argument_event_or_trace_list_value
+       export CBTF_HWCSAMP_EVENTS
+     fi
+     OPENSS_HWCSAMP_EVENTS=$input_argument_event_or_trace_list_value
+     export OPENSS_HWCSAMP_EVENTS
+  fi
+
+  if [ $debug_flag == 1 ] 
+  then
+    echo "DEBUG: about to run \"openss -offline -f "$1" hwcsamp, OPENSS_HWCSAMP_EVENTS=$OPENSS_HWCSAMP_EVENTS"
+    echo "DEBUG: about to run \"openss -offline -f "$1" hwcsamp, OPENSS_HWCSAMP_RATE=$OPENSS_HWCSAMP_RATE"
+  fi
+
+
+  if [ "$instrumentor" == "cbtf" ]
+  then
+    echo "[openss]: hwcsamp experiment calling osscollect."
+    if [ "$targetos" == "cray-xk" -o "$targetos" == "cray-xe" ]
+    then
+       osscollect --arch cray --program "$1" --collector hwcsamp
+    else
+       osscollect --program "$1" --collector hwcsamp
+    fi
+  elif [ "$instrumentor" == "offline" ]
+  then
+    echo "[openss]: hwcsamp experiment calling openss."
+    openss -offline -f "$1" hwcsamp
+  else
+    echo "[openss]: hwcsamp experiment calling nothing, else clause."
+  fi
+
+# ------------------------------------------------------------------------------------
+# -- HWCTIME EXPERIMENT SPECIFIC CODE -------------------------------------------------
+# ------------------------------------------------------------------------------------
+elif  [ $experiment_name == "osshwctime" ]
+then
+
+  if [ $debug_flag == 1 ]
+  then
+
+    if [ -z "$OPENSS_HWCTIME_EVENT" ] 
+    then
+      echo "DEBUG: in HWCTIME EXPERIMENT SECTION, NOT SET, OPENSS_HWCTIME_EVENT=$OPENSS_HWCTIME_EVENT"
+    else
+      echo "DEBUG: in HWCTIME EXPERIMENT SECTION, IS SET, OPENSS_HWCTIME_EVENT=$OPENSS_HWCTIME_EVENT"
+    fi
+
+    if [ -z "$OPENSS_HWCTIME_THRESHOLD" ] 
+    then
+      echo "DEBUG: in HWCTIME EXPERIMENT SECTION, NOT SET, OPENSS_HWCTIME_THRESHOLD=$OPENSS_HWCTIME_THRESHOLD"
+    else
+      echo "DEBUG: in HWCTIME EXPERIMENT SECTION, IS SET, OPENSS_HWCTIME_THRESHOLD=$OPENSS_HWCTIME_THRESHOLD"
+    fi
+
+  fi
+
+  if [ $low_flag == 1 ]
+  then
+     threshold=$hwctime_default_threshold
+     let threshold=threshold/2
+     if [ -z "$OPENSS_HWCTIME_THRESHOLD" ] 
+     then
+       if [ -z "$OPENSS_HWCTIME_EVENT" ] 
+       then
+         echo "[openss]: hwctime experiment using default papi event: \"$hwctime_default_event\"."
+         echo "[openss]: hwctime experiment using sampling threshold: \"$threshold\" because the \"low\" parameter is specified."
+       else
+         echo "[openss]: hwctime experiment using papi event: \"$OPENSS_HWCTIME_EVENT\" because the OPENSS_HWCTIME_EVENT environment variable is set."
+         echo "[openss]: hwctime experiment using sampling threshold: \"$threshold\" because the \"low\" parameter is specified."
+       fi
+     else
+       if [ -z "$OPENSS_HWCTIME_EVENT" ] 
+       then
+         echo "[openss]: hwctime experiment using default papi event: \"$hwctime_default_event\"."
+         echo "[openss]: hwctime experiment OPENSS_HWCTIME_THRESHOLD=$OPENSS_HWCTIME_THRESHOLD is set and will be altered to \"$threshold\" because the \"low\" parameter is specified."
+       else
+         echo "[openss]: hwctime experiment using papi event: \"$OPENSS_HWCTIME_EVENT\" because the OPENSS_HWCTIME_EVENT environment variable is set."
+         echo "[openss]: hwctime experiment OPENSS_HWCTIME_THRESHOLD=$OPENSS_HWCTIME_THRESHOLD is set and will be altered to \"$threshold\" because the \"low\" parameter is specified."
+       fi
+     fi
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: threshold=$threshold"
+     fi
+
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_HWCTIME_THRESHOLD=$threshold
+       export CBTF_HWCTIME_THRESHOLD
+     fi
+
+     OPENSS_HWCTIME_THRESHOLD=$threshold
+     export OPENSS_HWCTIME_THRESHOLD
+
+     if [ $debug_flag == 1 ]
+     then 
+        echo "DEBUG: in HWCTIME EXPERIMENT SECTION, RESET low, OPENSS_HWCTIME_THRESHOLD=$OPENSS_HWCTIME_THRESHOLD"
+     fi
+  elif [ $high_flag == 1 ]
+  then
+     threshold=$hwctime_default_threshold
+#     threshold=$OPENSS_HWCTIME_THRESHOLD
+     let threshold=threshold*4
+     if [ -z "$OPENSS_HWCTIME_THRESHOLD" ] 
+     then
+       if [ -z "$OPENSS_HWCTIME_EVENT" ] 
+       then
+         echo "[openss]: hwctime experiment using default papi event: \"$hwctime_default_event\"."
+         echo "[openss]: hwctime experiment using sampling threshold: \"$threshold\" because the \"high\" parameter is specified."
+       else
+         echo "[openss]: hwctime experiment using papi event: \"$OPENSS_HWCTIME_EVENT\" because the OPENSS_HWCTIME_EVENT environment variable is set."
+         echo "[openss]: hwctime experiment using sampling threshold: \"$threshold\" because the \"high\" parameter is specified."
+       fi
+     else
+       if [ -z "$OPENSS_HWCTIME_EVENT" ] 
+       then
+         echo "[openss]: hwctime experiment using default papi event: \"$hwctime_default_event\"."
+         echo "[openss]: hwctime experiment OPENSS_HWCTIME_THRESHOLD=$OPENSS_HWCTIME_THRESHOLD is set and will be altered to \"$threshold\" because the \"high\" parameter is specified."
+       else
+         echo "[openss]: hwctime experiment using papi event: \"$OPENSS_HWCTIME_EVENT\" because the OPENSS_HWCTIME_EVENT environment variable is set."
+         echo "[openss]: hwctime experiment OPENSS_HWCTIME_THRESHOLD=$OPENSS_HWCTIME_THRESHOLD is set and will be altered to \"$threshold\" because the \"high\" parameter is specified."
+       fi
+     fi
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: threshold=$threshold"
+     fi
+
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_HWCTIME_THRESHOLD=$threshold
+       export CBTF_HWCTIME_THRESHOLD
+     fi
+
+     OPENSS_HWCTIME_THRESHOLD=$threshold
+     export OPENSS_HWCTIME_THRESHOLD
+
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: in HWCTIME EXPERIMENT SECTION, RESET high, OPENSS_HWCTIME_THRESHOLD=$OPENSS_HWCTIME_THRESHOLD"
+     fi
+  elif [ $use_default_flag == 1 ]
+  then
+     if [ -z "$OPENSS_HWCTIME_THRESHOLD" ] 
+     then
+       if [ -z "$OPENSS_HWCTIME_EVENT" ] 
+       then
+         echo "[openss]: hwctime experiment using default papi event: \"$hwctime_default_event\" because the \"default\" parameter is specified."
+         echo "[openss]: hwctime experiment using default sampling threshold: \"$hwctime_default_threshold\" because the \"default\" parameter is specified."
+       else
+         echo "[openss]: hwctime experiment using default papi event overriding the OPENSS_HWCTIME_EVENT environment variable=\"$OPENSS_HWCTIME_EVENT\" setting because the \"default\" parameter is specified."
+         echo "[openss]: hwctime experiment using default sampling threshold: \"$hwctime_default_threshold\" because the \"default\" parameter is specified."
+       fi
+     else
+       if [ $hwctime_default_threshold != $OPENSS_HWCTIME_THRESHOLD ]
+       then
+         if [ -z "$OPENSS_HWCTIME_EVENT" ] 
+         then
+           echo "[openss]: hwctime experiment using default papi event: \"$hwctime_default_event\" because the \"default\" parameter is specified."
+           echo "[openss]: hwctime experiment using default sampling threshold: \"$hwctime_default_threshold\" overriding the OPENSS_HWCTIME_THRESHOLD=$OPENSS_HWCTIME_THRESHOLD environment variable because the \"default\" parameter is specified."
+         else
+           echo "[openss]: hwctime experiment using default papi event overriding the OPENSS_HWCTIME_EVENT environment variable=\"$OPENSS_HWCTIME_EVENT\" setting because the \"default\" parameter is specified."
+           echo "[openss]: hwctime experiment using default sampling threshold: \"$hwctime_default_threshold\" overriding the OPENSS_HWCTIME_THRESHOLD=$OPENSS_HWCTIME_THRESHOLD environment variable because the \"default\" parameter is specified."
+         fi
+       fi
+     fi
+
+     threshold=$hwctime_default_threshold
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: threshold=$threshold"
+     fi
+
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_HWCTIME_THRESHOLD=$threshold
+       export CBTF_HWCTIME_THRESHOLD
+     fi
+
+     OPENSS_HWCTIME_THRESHOLD=$threshold
+     export OPENSS_HWCTIME_THRESHOLD
+
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: in HWCTIME EXPERIMENT SECTION, RESET default, OPENSS_HWCTIME_THRESHOLD=$OPENSS_HWCTIME_THRESHOLD"
+     fi
+  elif [ $input_argument_rate_threshold_value != 0 ]
+  then
+     if [ -z "$OPENSS_HWCTIME_THRESHOLD" ] 
+     then
+       if [ -z "$OPENSS_HWCTIME_EVENT" ] 
+       then
+         if [ $input_argument_event_or_trace_list_value != 0 ]
+         then
+           echo "[openss]: hwctime experiment using input papi event: \"$input_argument_event_or_trace_list_value\"."
+         else
+           echo "[openss]: hwctime experiment using default papi event: \"$hwctime_default_event\"."
+         fi
+         echo "[openss]: hwctime experiment using sampling threshold: \"$input_argument_rate_threshold_value\" because \"rate value\" parameter is specified."
+       else
+         if [ $input_argument_event_or_trace_list_value != 0 ]
+         then
+           echo "[openss]: hwctime experiment using input papi event: \"$input_argument_event_or_trace_list_value\"."
+         else
+           echo "[openss]: hwctime experiment using papi event: \"$OPENSS_HWCTIME_EVENT\" because the OPENSS_HWCTIME_EVENT environment variable is set."
+         fi
+         echo "[openss]: hwctime experiment using sampling threshold: \"$input_argument_rate_threshold_value\" because \"rate value\" parameter is specified."
+       fi
+     else
+       if [ $input_argument_rate_threshold_value != $OPENSS_HWCTIME_THRESHOLD ]
+       then
+         if [ -z "$OPENSS_HWCTIME_EVENT" ] 
+         then
+           if [ $input_argument_event_or_trace_list_value != 0 ]
+           then
+             echo "[openss]: hwctime experiment using input papi event: \"$input_argument_event_or_trace_list_value\"."
+           else
+             echo "[openss]: hwctime experiment using default papi event: \"$hwctime_default_event\"."
+           fi
+           echo "[openss]: hwctime experiment OPENSS_HWCTIME_THRESHOLD=$OPENSS_HWCTIME_THRESHOLD is set and will be altered to \"$input_argument_rate_threshold_value\" because the \"rate value\" parameter is specified."
+         else
+           if [ $input_argument_event_or_trace_list_value != 0 ]
+           then
+             echo "[openss]: hwctime experiment using input papi event: \"$input_argument_event_or_trace_list_value\"."
+           else
+             echo "[openss]: hwctime experiment using papi event: \"$OPENSS_HWCTIME_EVENT\" because the OPENSS_HWCTIME_EVENT environment variable is set."
+           fi
+           echo "[openss]: hwctime experiment OPENSS_HWCTIME_THRESHOLD=$OPENSS_HWCTIME_THRESHOLD is set and will be altered to \"$input_argument_rate_threshold_value\" because the \"rate value\" parameter is specified."
+         fi
+       fi
+     fi
+     threshold=$input_argument_rate_threshold_value
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: threshold=$threshold"
+     fi
+
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_HWCTIME_THRESHOLD=$threshold
+       export CBTF_HWCTIME_THRESHOLD
+     fi
+
+     OPENSS_HWCTIME_THRESHOLD=$threshold
+     export OPENSS_HWCTIME_THRESHOLD
+
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: in HWCTIME EXPERIMENT SECTION, RESET input_argument_rate_threshold_value, OPENSS_HWCTIME_THRESHOLD=$OPENSS_HWCTIME_THRESHOLD"
+     fi
+  else
+     # An input Threshold was not specified
+     if [ -z "$OPENSS_HWCTIME_THRESHOLD" ] 
+     then
+       if [ -z "$OPENSS_HWCTIME_EVENT" ] 
+       then
+         if [ $input_argument_event_or_trace_list_value != 0 ]
+         then 
+           echo "[openss]: hwctime experiment using input papi event: \"$input_argument_event_or_trace_list_value\"."
+           echo "[openss]: hwctime experiment using the hwc experiment default sampling threshold: \"$hwctime_default_threshold\"."
+         else
+           echo "[openss]: hwctime experiment using default papi event: \"$hwctime_default_event\"."
+           echo "[openss]: hwctime experiment using the hwctime experiment default sampling threshold: \"$hwctime_default_threshold\"."
+         fi
+       else
+         # OPENSS_HWCTIME_EVENT was set
+         if [ $input_argument_event_or_trace_list_value != 0 ]
+         then 
+           echo "[openss]: hwctime experiment using input papi event: \"$input_argument_event_or_trace_list_value\"."
+           echo "[openss]: hwctime experiment using the hwctime experiment default sampling threshold: \"$hwctime_default_threshold\"."
+         else
+           echo "[openss]: hwctime experiment using papi event: \"$OPENSS_HWCTIME_EVENT\" because the OPENSS_HWCTIME_EVENT environment variable is set."
+           echo "[openss]: hwctime experiment using the hwctime experiment default sampling threshold: \"$hwctime_default_threshold\"."
+         fi
+       fi
+     else
+       # The threshold environment variable was set
+       if [ -z "$OPENSS_HWCTIME_EVENT" ] 
+       then
+         if [ $input_argument_event_or_trace_list_value != 0 ]
+         then 
+           echo "[openss]: hwctime experiment using input papi event: \"$input_argument_event_or_trace_list_value\"."
+           echo "[openss]: hwctime experiment OPENSS_HWCTIME_THRESHOLD=$OPENSS_HWCTIME_THRESHOLD is set and will be used as the sampling threshold."
+         else
+           echo "[openss]: hwctime experiment using default papi event: \"$hwctime_default_event\"."
+           echo "[openss]: hwctime experiment OPENSS_HWCTIME_THRESHOLD=$OPENSS_HWCTIME_THRESHOLD is set and will be used as the sampling threshold."
+         fi
+       else
+         if [ $input_argument_event_or_trace_list_value != 0 ]
+         then 
+           echo "[openss]: hwctime experiment using input papi event: \"$input_argument_event_or_trace_list_value\"."
+           echo "[openss]: hwctime experiment OPENSS_HWCTIME_THRESHOLD=$OPENSS_HWCTIME_THRESHOLD is set and will be used as the sampling threshold."
+         else
+           echo "[openss]: hwctime experiment using papi event: \"$OPENSS_HWCTIME_EVENT\" because the OPENSS_HWCTIME_EVENT environment variable is set."
+           echo "[openss]: hwctime experiment OPENSS_HWCTIME_THRESHOLD=$OPENSS_HWCTIME_THRESHOLD is set and will be used as the sampling threshold."
+         fi
+       fi
+     fi
+  fi 
+
+# The messages above should reflect whether this is set or not.  Now export the input event, if it was specified
+  if [ $input_argument_event_or_trace_list_value != 0 ]
+  then 
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_HWCTIME_EVENT=$input_argument_event_or_trace_list_value
+       export CBTF_HWCTIME_EVENT
+     fi
+     OPENSS_HWCTIME_EVENT=$input_argument_event_or_trace_list_value
+     export OPENSS_HWCTIME_EVENT
+  fi
+
+  if [ $debug_flag == 1 ] 
+  then
+    echo "DEBUG: about to run \"openss -offline -f "$1" hwctime, OPENSS_HWCTIME_EVENT=$OPENSS_HWCTIME_EVENT"
+    echo "DEBUG: about to run \"openss -offline -f "$1" hwctime, OPENSS_HWCTIME_THRESHOLD=$OPENSS_HWCTIME_THRESHOLD"
+  fi
+
+
+  if [ "$instrumentor" == "cbtf" ]
+  then
+    echo "[openss]: hwctime experiment calling osscollect."
+    if [ "$targetos" == "cray-xk" -o "$targetos" == "cray-xe" ]
+    then
+       osscollect --arch cray --program "$1" --collector hwctime
+    else
+       osscollect --program "$1" --collector hwctime
+    fi
+  elif [ "$instrumentor" == "offline" ]
+  then
+    echo "[openss]: hwctime experiment calling openss."
+    openss -offline -f "$1" hwctime
+  else
+    echo "[openss]: hwctime experiment calling nothing, else clause."
+  fi
+# ------------------------------------------------------------------------------------
+# -- IO EXPERIMENT SPECIFIC CODE -------------------------------------------------
+# ------------------------------------------------------------------------------------
+elif  [ $experiment_name == "ossio" ]
+then
+
+  if [ $debug_flag == 1 ]
+  then
+    echo "DEBUG: in IO EXPERIMENT SECTION, input_argument_event_or_trace_list_value=$input_argument_event_or_trace_list_value"
+  fi
+
+  if [ $input_argument_event_or_trace_list_value != 0 ]
+  then
+
+    if [ -z  "$OPENSS_IO_TRACED" ]
+    then
+      echo "[openss]: io experiment using input io experiment trace function list specified on the \"ossio\" command: \"$input_argument_event_or_trace_list_value\" overriding the default I/O function list."
+
+      if [ $debug_flag == 1 ]
+      then
+         echo "DEBUG: setting OPENSS_IO_TRACED to $input_argument_event_or_trace_list_value and overriding the previous value of OPENSS_IO_TRACED"
+      fi
+
+    else
+
+      echo "[openss]: io experiment using input io experiment trace function list specified on the \"ossio\" command: \"$input_argument_event_or_trace_list_value\" overriding the I/O function list specified by the environment variable: OPENSS_IO_TRACED."
+
+      if [ $debug_flag == 1 ]
+      then
+         echo "DEBUG: setting OPENSS_IO_TRACED to $input_argument_event_or_trace_list_value and overriding what was already set in OPENSS_IO_TRACED"
+      fi
+
+    fi
+
+    OPENSS_IO_TRACED=$input_argument_event_or_trace_list_value
+
+  elif [ $use_default_flag == 1 ]
+  then
+
+    if [ -z  "$OPENSS_IO_TRACED" ]
+    then
+       echo "[openss]: io experiment using function list: \"$io_default_traceable_functions\" because the \"default\" parameter is specified."
+     else
+       if [ $io_default_traceable_functions != $OPENSS_IO_TRACED ]
+       then
+         echo "[openss]: io experiment OPENSS_IO_TRACED=$OPENSS_IO_TRACED is set and will be altered to \"$io_default_traceable_functions\" because the \"default\" parameter is specified."
+       fi
+     fi
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: io, default, io_traced=$io_default_traceable_functions"
+     fi
+
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_IO_TRACED=$io_default_traceable_functions
+       export CBTF_IO_TRACED
+     fi
+
+     OPENSS_IO_TRACED=$io_default_traceable_functions
+     export OPENSS_IO_TRACED
+
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: in IO EXPERIMENT SECTION, RESET default, OPENSS_IO_TRACED=$OPENSS_IO_TRACED"
+     fi
+
+  else
+
+    # input argument or default argument not specified
+
+    if [ -z  "$OPENSS_IO_TRACED" ]
+    then
+
+      echo "[openss]: io experiment using the default I/O experiment trace function list: \"$io_default_traceable_functions\"."
+      OPENSS_IO_TRACED=$io_default_traceable_functions
+
+      if [ $debug_flag == 1 ]
+      then
+        echo "DEBUG: setting OPENSS_IO_TRACED to default $io_default_traceable_functions"
+      fi
+    else
+      echo "[openss]: io experiment OPENSS_IO_TRACED=$OPENSS_IO_TRACED is set and will override the default I/O function list."
+      if [ $debug_flag == 1 ]
+      then
+        echo "DEBUG: exporting already set OPENSS_IO_TRACED to $OPENSS_IO_TRACED"
+      fi
+    fi
+
+  fi
+
+  if [ $debug_flag == 1 ]
+  then
+    echo "DEBUG: about to call openss -offline for io experiment, OPENSS_IO_TRACED=$OPENSS_IO_TRACED"
+  fi
+
+  if [ "$instrumentor" == "cbtf" ]
+  then
+    export CBTF_IO_TRACED
+  fi
+
+  export OPENSS_IO_TRACED
+
+  if [ "$instrumentor" == "cbtf" ]
+  then
+    echo "[openss]: io experiment calling osscollect."
+    if [ "$targetos" == "cray-xk" -o "$targetos" == "cray-xe" ]
+    then
+       osscollect --arch cray --program "$1" --collector io
+    else
+       osscollect --program "$1" --collector io
+    fi
+  elif [ "$instrumentor" == "offline" ]
+  then
+    echo "[openss]: io experiment calling openss."
+    openss -offline -f "$1" io
+  else
+    echo "[openss]: io experiment calling nothing, else clause."
+  fi
+
+# ------------------------------------------------------------------------------------
+# -- IOT EXPERIMENT SPECIFIC CODE -------------------------------------------------
+# ------------------------------------------------------------------------------------
+elif  [ $experiment_name == "ossiot" ]
+then
+
+  if [ $debug_flag == 1 ]
+  then
+    echo "DEBUG: in IOT EXPERIMENT SECTION, input_argument_event_or_trace_list_value=$input_argument_event_or_trace_list_value"
+  fi
+
+  if [ $input_argument_event_or_trace_list_value != 0 ]
+  then
+
+    if [ -z  "$OPENSS_IOT_TRACED" ]
+    then
+      echo "[openss]: iot experiment using input iot experiment trace function list specified on the \"ossiot\" command: \"$input_argument_event_or_trace_list_value\" overriding the default I/O function list."
+
+      if [ $debug_flag == 1 ]
+      then
+         echo "DEBUG: setting OPENSS_IOT_TRACED to $input_argument_event_or_trace_list_value and overriding the previous value of OPENSS_IOT_TRACED"
+      fi
+
+    else
+
+      echo "[openss]: iot experiment using input iot experiment trace function list specified on the \"ossiot\" command: \"$input_argument_event_or_trace_list_value\" overriding the I/O function list specified by the environment variable: OPENSS_IOT_TRACED."
+
+      if [ $debug_flag == 1 ]
+      then
+         echo "DEBUG: setting OPENSS_IOT_TRACED to $input_argument_event_or_trace_list_value and overriding what was already set in OPENSS_IOT_TRACED"
+      fi
+
+    fi
+
+    OPENSS_IOT_TRACED=$input_argument_event_or_trace_list_value
+
+  elif [ $use_default_flag == 1 ]
+  then
+
+    if [ -z  "$OPENSS_IOT_TRACED" ]
+    then
+       echo "[openss]: iot experiment using function list: \"$iot_default_traceable_functions\" because the \"default\" parameter is specified."
+     else
+       if [ $iot_default_traceable_functions != $OPENSS_IOT_TRACED ]
+       then
+         echo "[openss]: iot experiment OPENSS_IOT_TRACED=$OPENSS_IOT_TRACED is set and will be altered to \"$iot_default_traceable_functions\" because the \"default\" parameter is specified."
+       fi
+     fi
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: iot, default, iot_traced=$iot_default_traceable_functions"
+     fi
+
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_IO_TRACED=$iot_default_traceable_functions
+       export CBTF_IO_TRACED
+     fi
+
+     OPENSS_IOT_TRACED=$iot_default_traceable_functions
+     export OPENSS_IOT_TRACED
+
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: in IOT EXPERIMENT SECTION, RESET default, OPENSS_IOT_TRACED=$OPENSS_IOT_TRACED"
+     fi
+
+  else
+
+    # input argument or default argument not specified
+
+    if [ -z  "$OPENSS_IOT_TRACED" ]
+    then
+
+      echo "[openss]: iot experiment using the default I/O experiment trace function list: \"$iot_default_traceable_functions\"."
+      OPENSS_IOT_TRACED=$iot_default_traceable_functions
+
+      if [ $debug_flag == 1 ]
+      then
+        echo "DEBUG: setting OPENSS_IOT_TRACED to default $iot_default_traceable_functions"
+      fi
+    else
+      echo "[openss]: iot experiment OPENSS_IOT_TRACED=$OPENSS_IOT_TRACED is set and will override the default I/O function list."
+      if [ $debug_flag == 1 ]
+      then
+        echo "DEBUG: exporting already set OPENSS_IOT_TRACED to $OPENSS_IOT_TRACED"
+      fi
+    fi
+
+  fi
+
+  if [ $debug_flag == 1 ]
+  then
+    echo "DEBUG: about to call openss -offline for iot experiment, OPENSS_IOT_TRACED=$OPENSS_IOT_TRACED"
+  fi
+
+  if [ "$instrumentor" == "cbtf" ]
+  then
+    export CBTF_IO_TRACED
+  fi
+
+  export OPENSS_IOT_TRACED
+
+  if [ "$instrumentor" == "cbtf" ]
+  then
+    echo "[openss]: iot experiment calling osscollect."
+    if [ "$targetos" == "cray-xk" -o "$targetos" == "cray-xe" ]
+    then
+       osscollect --arch cray --program "$1" --collector iot
+    else
+       osscollect --program "$1" --collector iot
+    fi
+  elif [ "$instrumentor" == "offline" ]
+  then
+    echo "[openss]: iot experiment calling openss."
+    openss -offline -f "$1" iot
+  else
+    echo "[openss]: iot experiment calling nothing, else clause."
+  fi
+
+# ------------------------------------------------------------------------------------
+# -- MPI EXPERIMENT SPECIFIC CODE -------------------------------------------------
+# ------------------------------------------------------------------------------------
+elif  [ $experiment_name == "ossmpi" ]
+then
+  if [ $debug_flag == 1 ]
+  then
+    echo "DEBUG: in MPI EXPERIMENT SECTION, input_argument_event_or_trace_list_value=$input_argument_event_or_trace_list_value"
+  fi
+
+#  if [ -z "$OPENSS_MPI_TRACED" ] 
+#  then
+#
+#    if [ $input_argument_event_or_trace_list_value != 0 ]
+#    then
+#      echo "[openss]: mpi experiment using input mpi experiment trace function list specified on the \"ossmpi\" command: \"$input_argument_event_or_trace_list_value\"."
+#    else
+#      echo "[openss]: mpi experiment using the default MPI experiment trace function list: \"$mpi_default_traceable_functions\"."
+#    fi
+#
+#  else
+#
+#    if [ $input_argument_event_or_trace_list_value != 0 ]
+#    then
+#      echo "[openss]: mpi experiment using input mpi experiment trace function list specified on the \"ossmpi\" command: \"$input_argument_event_or_trace_list_value\"."
+#    else
+#      echo "[openss]: mpi experiment OPENSS_MPI_TRACED=$OPENSS_MPI_TRACED is set and will be used as the MPI experiment trace function list."
+#    fi
+#
+#  fi
+
+  if [ $input_argument_event_or_trace_list_value != 0 ]
+  then
+
+    if [ -z  "$OPENSS_MPI_TRACED" ]
+    then
+      echo "[openss]: mpi experiment using input mpi experiment trace function list specified on the \"ossmpi\" command: \"$input_argument_event_or_trace_list_value\"."
+      if [ $debug_flag == 1 ]
+      then
+         echo "DEBUG: setting OPENSS_MPI_TRACED to $input_argument_event_or_trace_list_value"
+      fi
+    else
+      echo "[openss]: mpi experiment using input mpi experiment trace function list specified on the \"ossmpi\" command: \"$input_argument_event_or_trace_list_value\" overriding the OPENSS_MPI_TRACED environment variable setting."
+      if [ $debug_flag == 1 ]
+      then
+         echo "DEBUG: setting OPENSS_MPI_TRACED to $input_argument_event_or_trace_list_value and overriding what was already set in OPENSS_MPI_TRACED"
+      fi
+    fi
+
+    if [ $input_argument_event_or_trace_list_value == "all" ]
+    then
+       OPENSS_MPI_TRACED=$mpi_default_traceable_functions
+       if [ $debug_flag == 1 ]
+       then
+         echo "DEBUG: setting OPENSS_MPI_TRACED to $mpi_default_traceable_functions"
+       fi
+    elif [ $input_argument_event_or_trace_list_value == "collective_com" ]
+    then
+       OPENSS_MPI_TRACED=$mpi_collective_com_traceable_functions
+       if [ $debug_flag == 1 ]
+       then
+         echo "DEBUG: setting OPENSS_MPI_TRACED to $mpi_collective_com_traceable_functions"
+       fi
+    elif [ $input_argument_event_or_trace_list_value == "asynchronous_p2p" ]
+    then
+       OPENSS_MPI_TRACED=$mpi_asynchronous_p2p_traceable_functions
+       if [ $debug_flag == 1 ]
+       then
+         echo "DEBUG: setting OPENSS_MPI_TRACED to $mpi_asynchronous_p2p_traceable_functions"
+       fi
+    elif [ $input_argument_event_or_trace_list_value == "datatypes" ]
+    then
+       OPENSS_MPI_TRACED=$mpi_datatypes_traceable_functions
+       if [ $debug_flag == 1 ]
+       then
+         echo "DEBUG: setting OPENSS_MPI_TRACED to $mpi_datatypes_traceable_functions"
+       fi
+    elif [ $input_argument_event_or_trace_list_value == "environment" ]
+    then
+       OPENSS_MPI_TRACED=$mpi_environment_traceable_functions
+       if [ $debug_flag == 1 ]
+       then
+         echo "DEBUG: setting OPENSS_MPI_TRACED to $mpi_environment_traceable_functions"
+       fi
+    elif [ $input_argument_event_or_trace_list_value == "graphs_contexts_comms" ]
+    then
+       OPENSS_MPI_TRACED=$mpi_graphs_contexts_comms_traceable_functions
+       if [ $debug_flag == 1 ]
+       then
+         echo "DEBUG: setting OPENSS_MPI_TRACED to $mpi_graphs_contexts_comms_traceable_functions"
+       fi
+    elif [ $input_argument_event_or_trace_list_value == "persistent_com" ]
+    then
+       OPENSS_MPI_TRACED=$mpi_persistent_com_traceable_functions
+       if [ $debug_flag == 1 ]
+       then
+         echo "DEBUG: setting OPENSS_MPI_TRACED to $mpi_persistent_com_traceable_functions"
+       fi
+    elif [ $input_argument_event_or_trace_list_value == "process_topologies" ]
+    then
+       OPENSS_MPI_TRACED=$mpi_process_topologies_traceable_functions
+       if [ $debug_flag == 1 ]
+       then
+         echo "DEBUG: setting OPENSS_MPI_TRACED to $mpi_process_topologies_traceable_functions"
+       fi
+    elif [ $input_argument_event_or_trace_list_value == "synchronous_p2p" ]
+    then
+       OPENSS_MPI_TRACED=$mpi_synchronous_p2p_traceable_functions
+       if [ $debug_flag == 1 ]
+       then
+         echo "DEBUG: setting OPENSS_MPI_TRACED to $mpi_synchronous_p2p_traceable_functions"
+       fi
+    elif [ $input_argument_event_or_trace_list_value == "file_io" ]
+    then
+       OPENSS_MPI_TRACED=$mpi_file_io_traceable_functions
+       if [ $debug_flag == 1 ]
+       then
+         echo "DEBUG: setting OPENSS_MPI_TRACED to $mpi_file_io_traceable_functions"
+       fi
+    else
+       OPENSS_MPI_TRACED=$input_argument_event_or_trace_list_value
+       if [ $debug_flag == 1 ]
+       then
+         echo "DEBUG: setting OPENSS_MPI_TRACED to $input_argument_event_or_trace_list_value"
+       fi
+    fi
+
+
+  elif [ $use_default_flag == 1 ]
+  then
+
+    if [ -z  "$OPENSS_MPI_TRACED" ]
+     then
+       echo "[openss]: mpi experiment using function list: \"$mpi_default_traceable_functions\" because the \"default\" parameter is specified."
+     else
+       if [ $mpi_default_traceable_functions != $OPENSS_MPI_TRACED ]
+       then
+         echo "[openss]: mpi experiment OPENSS_MPI_TRACED=$OPENSS_MPI_TRACED is set and will be altered to \"$mpi_default_traceable_functions\" because the \"default\" parameter is specified."
+       fi
+     fi
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: mpi, default, mpi_traced=$mpi_default_traceable_functions"
+     fi
+
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_MPI_TRACED=$mpi_default_traceable_functions
+       export CBTF_MPI_TRACED
+     fi
+
+     OPENSS_MPI_TRACED=$mpi_default_traceable_functions
+     export OPENSS_MPI_TRACED
+
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: in MPI EXPERIMENT SECTION, RESET default, OPENSS_MPI_TRACED=$OPENSS_MPI_TRACED"
+     fi
+  else
+    # input argument not specified
+    if [ -z  "$OPENSS_MPI_TRACED" ]
+    then
+      echo "[openss]: mpi experiment using the default MPI experiment trace function list: \"$mpi_default_traceable_functions\"."
+      OPENSS_MPI_TRACED=$mpi_default_traceable_functions
+      if [ $debug_flag == 1 ]
+      then
+        echo "DEBUG: setting OPENSS_MPI_TRACED to default $mpi_default_traceable_functions"
+      fi
+    else
+      echo "[openss]: mpi experiment using the OPENSS_MPI_TRACED=$OPENSS_MPI_TRACED environment variable MPI function list overriding the default MPI experiment trace function list."
+      if [ $debug_flag == 1 ]
+      then
+        echo "DEBUG: exporting already set OPENSS_MPI_TRACED to $OPENSS_MPI_TRACED"
+      fi
+    fi
+  fi
+
+  if [ $debug_flag == 1 ]
+  then
+    echo "DEBUG: about to call openss -offline for mpi experiment, OPENSS_MPI_TRACED=$OPENSS_MPI_TRACED"
+  fi
+
+  if [ "$instrumentor" == "cbtf" ]
+  then
+    export CBTF_MPI_TRACED
+  fi
+
+  export OPENSS_MPI_TRACED
+
+  if [ "$instrumentor" == "cbtf" ]
+  then
+    echo "[openss]: mpi experiment calling osscollect."
+    if [ "$targetos" == "cray-xk" -o "$targetos" == "cray-xe" ]
+    then
+       osscollect --arch cray --program "$1" --collector mpi
+    else
+       osscollect --program "$1" --collector mpi
+    fi
+  elif [ "$instrumentor" == "offline" ]
+  then
+    echo "[openss]: mpi experiment calling openss."
+    openss -offline -f "$1" mpi
+  else
+    echo "[openss]: mpi experiment calling nothing, else clause."
+  fi
+
+# ------------------------------------------------------------------------------------
+# -- MPIP EXPERIMENT SPECIFIC CODE -------------------------------------------------
+# ------------------------------------------------------------------------------------
+elif  [ $experiment_name == "ossmpip" ]
+then
+  if [ $debug_flag == 1 ]
+  then
+    echo "DEBUG: in MPIP EXPERIMENT SECTION, input_argument_event_or_trace_list_value=$input_argument_event_or_trace_list_value"
+  fi
+
+  # NOTE: OPENSS_MPIP_TRACED is the external user interface for OpenSpeedShop users, 
+  # although we only look at CBTF_MPI_TRACED internally
+  # in the CBTF collector for mpip.
+
+  if [ $input_argument_event_or_trace_list_value != 0 ]
+  then
+    if [ -z  "$OPENSS_MPIP_TRACED" ]
+    then
+      echo "[openss]: mpip experiment using input mpip experiment trace function list specified on the \"ossmpip\" command: \"$input_argument_event_or_trace_list_value\"."
+      if [ $debug_flag == 1 ]
+      then
+         echo "DEBUG: setting OPENSS_MPIP_TRACED to $input_argument_event_or_trace_list_value"
+      fi
+    else
+      echo "[openss]: mpip experiment using input mpip experiment trace function list specified on the \"ossmpip\" command: \"$input_argument_event_or_trace_list_value\" overriding the MPIP function list specified by the OPENSS_MPIP_TRACED environment variable."
+      if [ $debug_flag == 1 ]
+      then
+         echo "DEBUG: setting OPENSS_MPIP_TRACED to $input_argument_event_or_trace_list_value and overriding what was already set in OPENSS_MPIP_TRACED"
+      fi
+    fi
+    OPENSS_MPIP_TRACED=$input_argument_event_or_trace_list_value
+
+  elif [ $use_default_flag == 1 ]
+  then
+    if [ -z  "$OPENSS_MPIP_TRACED" ]
+     then
+       echo "[openss]: mpip experiment using function list: \"$mpip_default_traceable_functions\" because the \"default\" parameter is specified."
+     else
+       if [ $mpip_default_traceable_functions != $OPENSS_MPIP_TRACED ]
+       then
+         echo "[openss]: mpip experiment OPENSS_MPIP_TRACED=$OPENSS_MPIP_TRACED is set and will be altered to \"$mpip_default_traceable_functions\" because the \"default\" parameter is specified."
+       fi
+     fi
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: mpip, default, mpip_traced=$mpip_default_traceable_functions"
+     fi
+
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_MPI_TRACED=$mpip_default_traceable_functions
+       export CBTF_MPI_TRACED
+     fi
+
+     OPENSS_MPIP_TRACED=$mpip_default_traceable_functions
+     export OPENSS_MPIP_TRACED
+
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: in MPIP EXPERIMENT SECTION, RESET default, OPENSS_MPIP_TRACED=$OPENSS_MPIP_TRACED"
+     fi
+  else
+    # input argument not specified
+    if [ -z  "$OPENSS_MPIP_TRACED" ]
+    then
+      echo "[openss]: mpip experiment using the default MPIP experiment trace function list: \"$mpip_default_traceable_functions\"."
+      OPENSS_MPIP_TRACED=$mpip_default_traceable_functions
+      if [ $debug_flag == 1 ]
+      then
+        echo "DEBUG: setting OPENSS_MPIP_TRACED to default $mpip_default_traceable_functions"
+      fi
+    else
+      echo "[openss]: mpip experiment OPENSS_MPIP_TRACED=$OPENSS_MPIP_TRACED is set and will be used as the MPIP experiment trace function list."
+      if [ $debug_flag == 1 ]
+      then
+        echo "DEBUG: exporting already set OPENSS_MPIP_TRACED to $OPENSS_MPIP_TRACED"
+      fi
+    fi
+  fi
+
+  if [ $debug_flag == 1 ]
+  then
+    echo "DEBUG: about to call openss -offline for mpip experiment, OPENSS_MPIP_TRACED=$OPENSS_MPIP_TRACED"
+  fi
+
+  if [ "$instrumentor" == "cbtf" ]
+  then
+    export CBTF_MPI_TRACED
+  fi
+
+  export OPENSS_MPIP_TRACED
+
+  if [ "$instrumentor" == "cbtf" ]
+  then
+    echo "[openss]: mpip experiment calling osscollect."
+    if [ "$targetos" == "cray-xk" -o "$targetos" == "cray-xe" ]
+    then
+       osscollect --arch cray --program "$1" --collector mpip
+    else
+       osscollect --program "$1" --collector mpip
+    fi
+  elif [ "$instrumentor" == "offline" ]
+  then
+    echo "[openss]: mpip experiment calling openss."
+    openss -offline -f "$1" mpip
+  else
+    echo "[openss]: mpip experiment calling nothing, else clause."
+  fi
+
+
+# ------------------------------------------------------------------------------------
+# -- MPIT EXPERIMENT SPECIFIC CODE -------------------------------------------------
+# ------------------------------------------------------------------------------------
+elif  [ $experiment_name == "ossmpit" ]
+then
+  if [ $debug_flag == 1 ]
+  then
+    echo "DEBUG: in MPIT EXPERIMENT SECTION, input_argument_event_or_trace_list_value=$input_argument_event_or_trace_list_value"
+  fi
+
+
+  if [ $input_argument_event_or_trace_list_value != 0 ]
+  then
+    if [ -z  "$OPENSS_MPIT_TRACED" ]
+    then
+      echo "[openss]: mpit experiment using input mpit experiment trace function list specified on the \"ossmpit\" command: \"$input_argument_event_or_trace_list_value\"."
+      if [ $debug_flag == 1 ]
+      then
+         echo "DEBUG: setting OPENSS_MPIT_TRACED to $input_argument_event_or_trace_list_value"
+      fi
+    else
+      echo "[openss]: mpit experiment using input mpit experiment trace function list specified on the \"ossmpit\" command: \"$input_argument_event_or_trace_list_value\" overriding the MPIT function list specified by the OPENSS_MPIT_TRACED environment variable."
+      if [ $debug_flag == 1 ]
+      then
+         echo "DEBUG: setting OPENSS_MPIT_TRACED to $input_argument_event_or_trace_list_value and overriding what was already set in OPENSS_MPIT_TRACED"
+      fi
+    fi
+    OPENSS_MPIT_TRACED=$input_argument_event_or_trace_list_value
+
+  elif [ $use_default_flag == 1 ]
+  then
+    if [ -z  "$OPENSS_MPIT_TRACED" ]
+     then
+       echo "[openss]: mpit experiment using function list: \"$mpit_default_traceable_functions\" because the \"default\" parameter is specified."
+     else
+       if [ $mpit_default_traceable_functions != $OPENSS_MPIT_TRACED ]
+       then
+         echo "[openss]: mpit experiment OPENSS_MPIT_TRACED=$OPENSS_MPIT_TRACED is set and will be altered to \"$mpit_default_traceable_functions\" because the \"default\" parameter is specified."
+       fi
+     fi
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: mpit, default, mpit_traced=$mpit_default_traceable_functions"
+     fi
+
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_MPI_TRACED=$mpit_default_traceable_functions
+       export CBTF_MPI_TRACED
+     fi
+
+     OPENSS_MPIT_TRACED=$mpit_default_traceable_functions
+     export OPENSS_MPIT_TRACED
+
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: in MPIT EXPERIMENT SECTION, RESET default, OPENSS_MPIT_TRACED=$OPENSS_MPIT_TRACED"
+     fi
+  else
+    # input argument not specified
+    if [ -z  "$OPENSS_MPIT_TRACED" ]
+    then
+      echo "[openss]: mpit experiment using the default MPIT experiment trace function list: \"$mpit_default_traceable_functions\"."
+      OPENSS_MPIT_TRACED=$mpit_default_traceable_functions
+      if [ $debug_flag == 1 ]
+      then
+        echo "DEBUG: setting OPENSS_MPIT_TRACED to default $mpit_default_traceable_functions"
+      fi
+    else
+      echo "[openss]: mpit experiment OPENSS_MPIT_TRACED=$OPENSS_MPIT_TRACED is set and will be used as the MPIT experiment trace function list."
+      if [ $debug_flag == 1 ]
+      then
+        echo "DEBUG: exporting already set OPENSS_MPIT_TRACED to $OPENSS_MPIT_TRACED"
+      fi
+    fi
+  fi
+
+  if [ $debug_flag == 1 ]
+  then
+    echo "DEBUG: about to call openss -offline for mpit experiment, OPENSS_MPIT_TRACED=$OPENSS_MPIT_TRACED"
+  fi
+
+  if [ "$instrumentor" == "cbtf" ]
+  then
+    export CBTF_MPI_TRACED
+  fi
+
+  export OPENSS_MPIT_TRACED
+
+  if [ "$instrumentor" == "cbtf" ]
+  then
+    echo "[openss]: mpit experiment calling osscollect."
+    if [ "$targetos" == "cray-xk" -o "$targetos" == "cray-xe" ]
+    then
+       osscollect --arch cray --program "$1" --collector mpit
+    else
+       osscollect --program "$1" --collector mpit
+    fi
+  elif [ "$instrumentor" == "offline" ]
+  then
+    echo "[openss]: mpit experiment calling openss."
+    openss -offline -f "$1" mpit
+  else
+    echo "[openss]: mpit experiment calling nothing, else clause."
+  fi
+
+
+# ------------------------------------------------------------------------------------
+# -- MPIOTF EXPERIMENT SPECIFIC CODE -------------------------------------------------
+# ------------------------------------------------------------------------------------
+elif  [ $experiment_name == "ossmpiotf" ]
+then
+  if [ $debug_flag == 1 ]
+  then
+    echo "DEBUG: in MPIOTF EXPERIMENT SECTION, input_argument_event_or_trace_list_value=$input_argument_event_or_trace_list_value"
+  fi
+
+
+  if [ $input_argument_event_or_trace_list_value != 0 ]
+  then
+    if [ -z  "$OPENSS_MPIOTF_TRACED" ]
+    then
+      echo "[openss]: mpiotf experiment using input mpiotf experiment trace function list specified on the \"ossmpiotf\" command: \"$input_argument_event_or_trace_list_value\"."
+      if [ $debug_flag == 1 ]
+      then
+         echo "DEBUG: setting OPENSS_MPIOTF_TRACED to $input_argument_event_or_trace_list_value"
+      fi
+    else
+      echo "[openss]: mpiotf experiment using input mpiotf experiment trace function list specified on the \"ossmpiotf\" command: \"$input_argument_event_or_trace_list_value\" overriding the MPIOTF function list specified by the OPENSS_MPIOTF_TRACED environment variable."
+      if [ $debug_flag == 1 ]
+      then
+         echo "DEBUG: setting OPENSS_MPIOTF_TRACED to $input_argument_event_or_trace_list_value and overriding what was already set in OPENSS_MPIOTF_TRACED"
+      fi
+    fi
+    OPENSS_MPIOTF_TRACED=$input_argument_event_or_trace_list_value
+
+  elif [ $use_default_flag == 1 ]
+  then
+    if [ -z  "$OPENSS_MPIOTF_TRACED" ]
+     then
+       echo "[openss]: mpiotf experiment using function list: \"$mpiotf_default_traceable_functions\" because the \"default\" parameter is specified."
+     else
+       if [ $mpiotf_default_traceable_functions != $OPENSS_MPIOTF_TRACED ]
+       then
+         echo "[openss]: mpiotf experiment OPENSS_MPIOTF_TRACED=$OPENSS_MPIOTF_TRACED is set and will be altered to \"$mpiotf_default_traceable_functions\" because the \"default\" parameter is specified."
+       fi
+     fi
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: mpiotf, default, mpiotf_traced=$mpiotf_default_traceable_functions"
+     fi
+
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_MPI_TRACED=$mpiotf_default_traceable_functions
+       export CBTF_MPI_TRACED
+     fi
+
+     OPENSS_MPIOTF_TRACED=$mpiotf_default_traceable_functions
+     export OPENSS_MPIOTF_TRACED
+
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: in MPIOTF EXPERIMENT SECTION, RESET default, OPENSS_MPIOTF_TRACED=$OPENSS_MPIOTF_TRACED"
+     fi
+  else
+    # input argument not specified
+    if [ -z  "$OPENSS_MPIOTF_TRACED" ]
+    then
+      echo "[openss]: mpiotf experiment using the default MPIOTF experiment trace function list: \"$mpiotf_default_traceable_functions\"."
+      OPENSS_MPIOTF_TRACED=$mpiotf_default_traceable_functions
+      if [ $debug_flag == 1 ]
+      then
+        echo "DEBUG: setting OPENSS_MPIOTF_TRACED to default $mpiotf_default_traceable_functions"
+      fi
+    else
+      echo "[openss]: mpiotf experiment OPENSS_MPIOTF_TRACED=$OPENSS_MPIOTF_TRACED is set and will be used as the MPIOTF experiment trace function list."
+      if [ $debug_flag == 1 ]
+      then
+        echo "DEBUG: exporting already set OPENSS_MPIOTF_TRACED to $OPENSS_MPIOTF_TRACED"
+      fi
+    fi
+  fi
+
+  if [ $debug_flag == 1 ]
+  then
+    echo "DEBUG: about to call openss -offline for mpiotf experiment, OPENSS_MPIOTF_TRACED=$OPENSS_MPIOTF_TRACED"
+  fi
+
+  if [ "$instrumentor" == "cbtf" ]
+  then
+    export CBTF_MPI_TRACED
+  fi
+
+  export OPENSS_MPIOTF_TRACED
+
+  if [ "$instrumentor" == "cbtf" ]
+  then
+    echo "[openss]: mpiotf experiment calling osscollect."
+    if [ "$targetos" == "cray-xk" -o "$targetos" == "cray-xe" ]
+    then
+       osscollect --arch cray --program "$1" --collector mpiotf
+    else
+       osscollect --program "$1" --collector mpiotf
+    fi
+  elif [ "$instrumentor" == "offline" ]
+  then
+    echo "[openss]: mpiotf experiment calling openss."
+    openss -offline -f "$1" mpiotf
+  else
+    echo "[openss]: mpiotf experiment calling nothing, else clause."
+  fi
+
+
+# ------------------------------------------------------------------------------------
+# -- FPE EXPERIMENT SPECIFIC CODE -------------------------------------------------
+# ------------------------------------------------------------------------------------
+elif  [ $experiment_name == "ossfpe" ]
+then
+  if [ $debug_flag == 1 ]
+  then
+    echo "DEBUG: in FPE EXPERIMENT SECTION, input_argument_event_or_trace_list_value=$input_argument_event_or_trace_list_value"
+  fi
+
+  if [ $input_argument_event_or_trace_list_value != 0 ]
+  then
+    if [ -z  "$OPENSS_FPE_EVENT" ]
+    then
+      echo "[openss]: fpe experiment using input fpe experiment event list specified on the \"ossfpe\" command: \"$input_argument_event_or_trace_list_value\"."
+      if [ $debug_flag == 1 ]
+      then
+         echo "DEBUG: setting OPENSS_FPE_EVENT to $input_argument_event_or_trace_list_value"
+      fi
+    else
+      echo "[openss]: fpe experiment using input fpe experiment event list specified on the \"ossfpe\" command: \"$input_argument_event_or_trace_list_value\" overriding the OPENSS_FPE_EVENT environment variable setting."
+      if [ $debug_flag == 1 ]
+      then
+         echo "DEBUG: setting OPENSS_FPE_EVENT to $input_argument_event_or_trace_list_value and overriding what was already set in OPENSS_FPE_EVENT"
+      fi
+    fi
+    OPENSS_FPE_EVENT=$input_argument_event_or_trace_list_value
+  elif [ $use_default_flag == 1 ]
+  then
+    if [ -z  "$OPENSS_FPE_EVENT" ]
+     then
+       echo "[openss]: fpe experiment using function list: \"$fpe_default_events\" because the \"default\" parameter is specified."
+     else
+       if [ $fpe_default_events != $OPENSS_FPE_EVENT ]
+       then
+         echo "[openss]: fpe experiment OPENSS_FPE_EVENT=$OPENSS_FPE_EVENT is set and will be altered to \"$fpe_default_events\" because the \"default\" parameter is specified."
+       fi
+     fi
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: fpe, default, fpe_traced=$fpe_default_events"
+     fi
+
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_FPE_EVENT=$fpe_default_events
+       export CBTF_FPE_EVENT
+     fi
+
+     OPENSS_FPE_EVENT=$fpe_default_events
+     export OPENSS_FPE_EVENT
+
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: in FPE EXPERIMENT SECTION, RESET default, OPENSS_FPE_EVENT=$OPENSS_FPE_EVENT"
+     fi
+  else
+    # input argument not specified
+    if [ -z  "$OPENSS_FPE_EVENT" ]
+    then
+      echo "[openss]: fpe experiment using the default FPE experiment event list: \"$fpe_default_events\"."
+      OPENSS_FPE_EVENT=$fpe_default_events
+      if [ $debug_flag == 1 ]
+      then
+        echo "DEBUG: setting OPENSS_FPE_EVENT to default $fpe_default_events"
+      fi
+    else
+      echo "[openss]: fpe experiment OPENSS_FPE_EVENT=$OPENSS_FPE_EVENT is set and will be used as the FPE experiment event list."
+      if [ $debug_flag == 1 ]
+      then
+        echo "DEBUG: exporting already set OPENSS_FPE_EVENT to $OPENSS_FPE_EVENT"
+      fi
+    fi
+  fi
+
+  if [ $debug_flag == 1 ]
+  then
+    echo "DEBUG: about to call openss -offline for fpe experiment, OPENSS_FPE_EVENT=$OPENSS_FPE_EVENT"
+  fi
+
+  if [ "$instrumentor" == "cbtf" ]
+  then
+    export CBTF_FPE_EVENT
+  fi
+
+  export OPENSS_FPE_EVENT
+
+  if [ "$instrumentor" == "cbtf" ]
+  then
+    echo "[openss]: fpe experiment calling osscollect."
+    if [ "$targetos" == "cray-xk" -o "$targetos" == "cray-xe" ]
+    then
+       osscollect --arch cray --program "$1" --collector fpe
+    else
+       osscollect --program "$1" --collector fpe
+    fi
+  elif [ "$instrumentor" == "offline" ]
+  then
+    echo "[openss]: fpe experiment calling openss."
+    openss -offline -f "$1" fpe
+  else
+    echo "[openss]: fpe experiment calling nothing, else clause."
+  fi
+
+# ------------------------------------------------------------------------------------
+# -- IOP EXPERIMENT SPECIFIC CODE -------------------------------------------------
+# ------------------------------------------------------------------------------------
+
+elif  [ $experiment_name == "ossiop" ]
+then
+
+  if [ $debug_flag == 1 ]
+  then
+    echo "DEBUG: in IOP EXPERIMENT SECTION, input_argument_event_or_trace_list_value=$input_argument_event_or_trace_list_value"
+  fi
+
+  if [ $input_argument_event_or_trace_list_value != 0 ]
+  then
+
+    if [ -z  "$OPENSS_IOP_TRACED" ]
+    then
+      echo "[openss]: iop experiment using input iop experiment trace function list specified on the \"ossiop\" command: \"$input_argument_event_or_trace_list_value\" overriding the default I/O function list."
+
+      if [ $debug_flag == 1 ]
+      then
+         echo "DEBUG: setting OPENSS_IOP_TRACED to $input_argument_event_or_trace_list_value and overriding the previous value of OPENSS_IOP_TRACED"
+      fi
+
+    else
+
+      echo "[openss]: iop experiment using input iop experiment trace function list specified on the \"ossiop\" command: \"$input_argument_event_or_trace_list_value\" overriding the I/O function list specified by the environment variable: OPENSS_IOP_TRACED."
+
+      if [ $debug_flag == 1 ]
+      then
+         echo "DEBUG: setting OPENSS_IOP_TRACED to $input_argument_event_or_trace_list_value and overriding what was already set in OPENSS_IOP_TRACED"
+      fi
+
+    fi
+
+    OPENSS_IOP_TRACED=$input_argument_event_or_trace_list_value
+
+  elif [ $use_default_flag == 1 ]
+  then
+
+    if [ -z  "$OPENSS_IOP_TRACED" ]
+    then
+       echo "[openss]: iop experiment using function list: \"$iop_default_traceable_functions\" because the \"default\" parameter is specified."
+     else
+       if [ $iop_default_traceable_functions != $OPENSS_IOP_TRACED ]
+       then
+         echo "[openss]: iop experiment OPENSS_IOP_TRACED=$OPENSS_IOP_TRACED is set and will be altered to \"$iop_default_traceable_functions\" because the \"default\" parameter is specified."
+       fi
+     fi
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: iop, default, iop_traced=$iop_default_traceable_functions"
+     fi
+
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_IO_TRACED=$iop_default_traceable_functions
+       export CBTF_IO_TRACED
+     fi
+
+     OPENSS_IOP_TRACED=$iop_default_traceable_functions
+     export OPENSS_IOP_TRACED
+
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: in IOP EXPERIMENT SECTION, RESET default, OPENSS_IOP_TRACED=$OPENSS_IOP_TRACED"
+     fi
+
+  else
+
+    # input argument or default argument not specified
+
+    if [ -z  "$OPENSS_IOP_TRACED" ]
+    then
+
+      echo "[openss]: iop experiment using the default I/O experiment trace function list: \"$iop_default_traceable_functions\"."
+      OPENSS_IOP_TRACED=$iop_default_traceable_functions
+
+      if [ $debug_flag == 1 ]
+      then
+        echo "DEBUG: setting OPENSS_IOP_TRACED to default $iop_default_traceable_functions"
+      fi
+    else
+      echo "[openss]: iop experiment OPENSS_IOP_TRACED=$OPENSS_IOP_TRACED is set and will override the default I/O function list."
+      if [ $debug_flag == 1 ]
+      then
+        echo "DEBUG: exporting already set OPENSS_IOP_TRACED to $OPENSS_IOP_TRACED"
+      fi
+    fi
+
+  fi
+
+  if [ "$instrumentor" == "cbtf" ]
+  then
+    export CBTF_IO_TRACED
+  fi
+
+  export OPENSS_IOP_TRACED
+
+  if [ "$instrumentor" == "cbtf" ]
+  then
+    echo "[openss]: iop experiment calling osscollect."
+    if [ "$targetos" == "cray-xk" -o "$targetos" == "cray-xe" ]
+    then
+       osscollect --arch cray --program "$1" --collector iop
+    else
+       osscollect --program "$1" --collector iop
+    fi
+  elif [ "$instrumentor" == "offline" ]
+  then
+    echo "[openss]: iop experiment is not implemented in the offline version of openss."
+    #openss -offline -f "$1" iop
+  else
+    echo "[openss]: iop experiment calling nothing, else clause."
+  fi
+
+
+# ------------------------------------------------------------------------------------
+# -- MEM EXPERIMENT SPECIFIC CODE -------------------------------------------------
+# ------------------------------------------------------------------------------------
+
+elif  [ $experiment_name == "ossmem" ]
+then
+
+  if [ $debug_flag == 1 ]
+  then
+    echo "DEBUG: in MEM EXPERIMENT SECTION, input_argument_event_or_trace_list_value=$input_argument_event_or_trace_list_value"
+  fi
+
+  if [ $input_argument_event_or_trace_list_value != 0 ]
+  then
+
+    if [ -z  "$OPENSS_MEM_TRACED" ]
+    then
+      echo "[openss]: mem experiment using input mem experiment trace function list specified on the \"ossmem\" command: \"$input_argument_event_or_trace_list_value\" overriding the default mem experiment function list."
+
+      if [ $debug_flag == 1 ]
+      then
+         echo "DEBUG: setting OPENSS_MEM_TRACED to $input_argument_event_or_trace_list_value and overriding the previous value of OPENSS_MEM_TRACED"
+      fi
+
+    else
+
+      echo "[openss]: mem experiment using input mem experiment trace function list specified on the \"ossmem\" command: \"$input_argument_event_or_trace_list_value\" overriding the mem experiment function list specified by the environment variable: OPENSS_MEM_TRACED."
+
+      if [ $debug_flag == 1 ]
+      then
+         echo "DEBUG: setting OPENSS_MEM_TRACED to $input_argument_event_or_trace_list_value and overriding what was already set in OPENSS_MEM_TRACED"
+      fi
+
+    fi
+
+    OPENSS_MEM_TRACED=$input_argument_event_or_trace_list_value
+
+  elif [ $use_default_flag == 1 ]
+  then
+
+    if [ -z  "$OPENSS_MEM_TRACED" ]
+    then
+       echo "[openss]: mem experiment using function list: \"$mem_default_traceable_functions\" because the \"default\" parameter is specified."
+     else
+       if [ $mem_default_traceable_functions != $OPENSS_MEM_TRACED ]
+       then
+         echo "[openss]: mem experiment OPENSS_MEM_TRACED=$OPENSS_MEM_TRACED is set and will be altered to \"$mem_default_traceable_functions\" because the \"default\" parameter is specified."
+       fi
+     fi
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: mem, default, mem_traced=$mem_default_traceable_functions"
+     fi
+
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_MEM_TRACED=$mem_default_traceable_functions
+       export CBTF_MEM_TRACED
+     fi
+     OPENSS_MEM_TRACED=$mem_default_traceable_functions
+     export OPENSS_MEM_TRACED
+
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: in MEM EXPERIMENT SECTION, RESET default, OPENSS_MEM_TRACED=$OPENSS_MEM_TRACED"
+     fi
+
+  else
+
+    # input argument or default argument not specified
+
+    if [ -z  "$OPENSS_MEM_TRACED" ]
+    then
+
+      echo "[openss]: mem experiment using the default I/O experiment trace function list: \"$mem_default_traceable_functions\"."
+      OPENSS_MEM_TRACED=$mem_default_traceable_functions
+
+      if [ $debug_flag == 1 ]
+      then
+        echo "DEBUG: setting OPENSS_MEM_TRACED to default $mem_default_traceable_functions"
+      fi
+    else
+      echo "[openss]: mem experiment OPENSS_MEM_TRACED=$OPENSS_MEM_TRACED is set and will override the default I/O function list."
+      if [ $debug_flag == 1 ]
+      then
+        echo "DEBUG: exporting already set OPENSS_MEM_TRACED to $OPENSS_MEM_TRACED"
+      fi
+    fi
+
+  fi
+
+  if [ "$instrumentor" == "cbtf" ]
+  then
+    export CBTF_MEM_TRACED
+  fi
+
+  export OPENSS_MEM_TRACED
+
+  if [ "$instrumentor" == "cbtf" ]
+  then
+    echo "[openss]: mem experiment calling osscollect."
+    if [ "$targetos" == "cray-xk" -o "$targetos" == "cray-xe" ]
+    then
+       osscollect --arch cray --program "$1" --collector mem
+    else
+       osscollect --program "$1" --collector mem
+    fi
+  elif [ "$instrumentor" == "offline" ]
+  then
+    echo "[openss]: mem experiment is not implemented in the offline version of openss."
+    #openss -offline -f "$1" mem
+  else
+    echo "[openss]: mem experiment calling nothing, else clause."
+  fi
+
+# ------------------------------------------------------------------------------------
+# -- PTHREADS EXPERIMENT SPECIFIC CODE -------------------------------------------------
+# ------------------------------------------------------------------------------------
+
+elif  [ $experiment_name == "osspthreads" ]
+then
+
+  if [ $debug_flag == 1 ]
+  then
+    echo "DEBUG: in PTHREADS EXPERIMENT SECTION, input_argument_event_or_trace_list_value=$input_argument_event_or_trace_list_value"
+  fi
+
+  if [ $input_argument_event_or_trace_list_value != 0 ]
+  then
+
+    if [ -z  "$OPENSS_PTHREADS_TRACED" ]
+    then
+      echo "[openss]: pthreads experiment using input pthreads experiment trace function list specified on the \"osspthreads\" command: \"$input_argument_event_or_trace_list_value\" overriding the default I/O function list."
+
+      if [ $debug_flag == 1 ]
+      then
+         echo "DEBUG: setting OPENSS_PTHREADS_TRACED to $input_argument_event_or_trace_list_value and overriding the previous value of OPENSS_PTHREADS_TRACED"
+      fi
+
+    else
+
+      echo "[openss]: pthreads experiment using input pthreads experiment trace function list specified on the \"osspthreads\" command: \"$input_argument_event_or_trace_list_value\" overriding the I/O function list specified by the environment variable: OPENSS_PTHREADS_TRACED."
+
+      if [ $debug_flag == 1 ]
+      then
+         echo "DEBUG: setting OPENSS_PTHREADS_TRACED to $input_argument_event_or_trace_list_value and overriding what was already set in OPENSS_PTHREADS_TRACED"
+      fi
+
+    fi
+
+    OPENSS_PTHREADS_TRACED=$input_argument_event_or_trace_list_value
+
+  elif [ $use_default_flag == 1 ]
+  then
+
+    if [ -z  "$OPENSS_PTHREADS_TRACED" ]
+    then
+       echo "[openss]: pthreads experiment using function list: \"$pthreads_default_traceable_functions\" because the \"default\" parameter is specified."
+     else
+       if [ $pthreads_default_traceable_functions != $OPENSS_PTHREADS_TRACED ]
+       then
+         echo "[openss]: pthreads experiment OPENSS_PTHREADS_TRACED=$OPENSS_PTHREADS_TRACED is set and will be altered to \"$pthreads_default_traceable_functions\" because the \"default\" parameter is specified."
+       fi
+     fi
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: pthreads, default, pthreads_traced=$pthreads_default_traceable_functions"
+     fi
+
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_PTHREADS_TRACED=$pthreads_default_traceable_functions
+       export CBTF_PTHREADS_TRACED
+     fi
+
+     OPENSS_PTHREADS_TRACED=$pthreads_default_traceable_functions
+     export OPENSS_PTHREADS_TRACED
+
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: in PTHREADS EXPERIMENT SECTION, RESET default, OPENSS_PTHREADS_TRACED=$OPENSS_PTHREADS_TRACED"
+     fi
+
+  else
+
+    # input argument or default argument not specified
+
+    if [ -z  "$OPENSS_PTHREADS_TRACED" ]
+    then
+
+      echo "[openss]: pthreads experiment using the default I/O experiment trace function list: \"$pthreads_default_traceable_functions\"."
+      OPENSS_PTHREADS_TRACED=$pthreads_default_traceable_functions
+
+      if [ $debug_flag == 1 ]
+      then
+        echo "DEBUG: setting OPENSS_PTHREADS_TRACED to default $pthreads_default_traceable_functions"
+      fi
+    else
+      echo "[openss]: pthreads experiment OPENSS_PTHREADS_TRACED=$OPENSS_PTHREADS_TRACED is set and will override the default I/O function list."
+      if [ $debug_flag == 1 ]
+      then
+        echo "DEBUG: exporting already set OPENSS_PTHREADS_TRACED to $OPENSS_PTHREADS_TRACED"
+      fi
+    fi
+
+  fi
+
+  if [ "$instrumentor" == "cbtf" ]
+  then
+    export CBTF_PTHREADS_TRACED
+  fi
+
+  export OPENSS_PTHREADS_TRACED
+
+  if [ "$instrumentor" == "cbtf" ]
+  then
+    echo "[openss]: pthreads experiment calling osscollect."
+    if [ "$targetos" == "cray-xk" -o "$targetos" == "cray-xe" ]
+    then
+       osscollect --arch cray --program "$1" --collector pthreads
+    else
+       osscollect --program "$1" --collector pthreads
+    fi
+  elif [ "$instrumentor" == "offline" ]
+  then
+    echo "[openss]: pthreads experiment is not implemented in the offline version of openss."
+    #openss -offline -f "$1" pthreads
+  else
+    echo "[openss]: pthreads experiment calling nothing, else clause."
+  fi
+
+# ------------------------------------------------------------------------------------
+# -- CUDA EXPERIMENT SPECIFIC CODE -------------------------------------------------
+# ------------------------------------------------------------------------------------
+
+elif  [ $experiment_name == "osscuda" ]
+then
+
+  if [ $debug_flag == 1 ]
+  then
+    echo "DEBUG: in CUDA EXPERIMENT SECTION, input_argument_event_or_trace_list_value=$input_argument_event_or_trace_list_value"
+  fi
+
+  if [ $input_argument_event_or_trace_list_value != 0 ]
+  then
+
+    if [ -z  "$OPENSS_CUDA_TRACED" ]
+    then
+      echo "[openss]: cuda experiment using input cuda experiment trace function list specified on the \"osscuda\" command: \"$input_argument_event_or_trace_list_value\" overriding the default I/O function list."
+
+      if [ $debug_flag == 1 ]
+      then
+         echo "DEBUG: setting OPENSS_CUDA_TRACED to $input_argument_event_or_trace_list_value and overriding the previous value of OPENSS_CUDA_TRACED"
+      fi
+
+    else
+
+      echo "[openss]: cuda experiment using input cuda experiment trace function list specified on the \"osscuda\" command: \"$input_argument_event_or_trace_list_value\" overriding the I/O function list specified by the environment variable: OPENSS_CUDA_TRACED."
+
+      if [ $debug_flag == 1 ]
+      then
+         echo "DEBUG: setting OPENSS_CUDA_TRACED to $input_argument_event_or_trace_list_value and overriding what was already set in OPENSS_CUDA_TRACED"
+      fi
+
+    fi
+
+    OPENSS_CUDA_TRACED=$input_argument_event_or_trace_list_value
+
+  elif [ $use_default_flag == 1 ]
+  then
+
+    if [ -z  "$OPENSS_CUDA_TRACED" ]
+    then
+       echo "[openss]: cuda experiment using function list: \"$cuda_default_traceable_functions\" because the \"default\" parameter is specified."
+     else
+       if [ $cuda_default_traceable_functions != $OPENSS_CUDA_TRACED ]
+       then
+         echo "[openss]: cuda experiment OPENSS_CUDA_TRACED=$OPENSS_CUDA_TRACED is set and will be altered to \"$cuda_default_traceable_functions\" because the \"default\" parameter is specified."
+       fi
+     fi
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: cuda, default, cuda_traced=$cuda_default_traceable_functions"
+     fi
+
+     if [ "$instrumentor" == "cbtf" ]
+     then
+       CBTF_CUDA_TRACED=$cuda_default_traceable_functions
+       export CBTF_CUDA_TRACED
+     fi
+
+     OPENSS_CUDA_TRACED=$cuda_default_traceable_functions
+     export OPENSS_CUDA_TRACED
+
+     if [ $debug_flag == 1 ]
+     then 
+       echo "DEBUG: in CUDA EXPERIMENT SECTION, RESET default, OPENSS_CUDA_TRACED=$OPENSS_CUDA_TRACED"
+     fi
+
+  else
+
+    # input argument or default argument not specified
+
+    if [ -z  "$OPENSS_CUDA_TRACED" ]
+    then
+
+      echo "[openss]: cuda experiment using the default I/O experiment trace function list: \"$cuda_default_traceable_functions\"."
+      OPENSS_CUDA_TRACED=$cuda_default_traceable_functions
+
+      if [ $debug_flag == 1 ]
+      then
+        echo "DEBUG: setting OPENSS_CUDA_TRACED to default $cuda_default_traceable_functions"
+      fi
+    else
+      echo "[openss]: cuda experiment OPENSS_CUDA_TRACED=$OPENSS_CUDA_TRACED is set and will override the default I/O function list."
+      if [ $debug_flag == 1 ]
+      then
+        echo "DEBUG: exporting already set OPENSS_CUDA_TRACED to $OPENSS_CUDA_TRACED"
+      fi
+    fi
+
+  fi
+
+  if [ "$instrumentor" == "cbtf" ]
+  then
+    export CBTF_CUDA_TRACED
+  fi
+
+  export OPENSS_CUDA_TRACED
+
+  if [ "$instrumentor" == "cbtf" ]
+  then
+    echo "[openss]: cuda experiment calling osscollect."
+    if [ "$targetos" == "cray-xk" -o "$targetos" == "cray-xe" ]
+    then
+       osscollect --arch cray --program "$1" --collector cuda
+    else
+       osscollect --program "$1" --collector cuda
+    fi
+  elif [ "$instrumentor" == "offline" ]
+  then
+    echo "[openss]: cuda experiment is not implemented in the offline version of openss."
+    #openss -offline -f "$1" cuda
+  else
+    echo "[openss]: cuda experiment calling nothing, else clause."
+  fi
+
+
+fi
+
+
+# ------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------
+
+
